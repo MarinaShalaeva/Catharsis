@@ -1,5 +1,14 @@
-# Visual Studio 2015 user specific files
+# Rider specific files
+.idea/
+
+# Visual Studio user specific files
 .vs/
+*.vsconfig
+
+# Files with temporary assets and notes
+DOCUMENT_ASSETS
+*.pdf
+*.txt
 
 # Compiled Object files
 *.slo
@@ -40,6 +49,10 @@
 *.sdf
 *.VC.db
 *.VC.opendb
+
+# Temp files
+*.cpp~
+*.h~
 
 # Precompiled Assets
 SourceArt/**/*.png
