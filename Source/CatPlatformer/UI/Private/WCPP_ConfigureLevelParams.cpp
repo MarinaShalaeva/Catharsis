@@ -109,15 +109,15 @@ void UWCPP_ConfigureLevelParams::NativeConstruct()
 
 	PanelsNumber = PanelsSwitcher->GetNumWidgets();
 
-	if (!IsValid(GameInstanceRef))
+	if (!GameInstanceRef.IsValid())
 	{
 		GameInstanceRef = GetGameInstance<UCPP_GameInstance>();
 	}
-	if (!IsValid(PlayerControllerRef))
+	if (!PlayerControllerRef.IsValid())
 	{
 		PlayerControllerRef = GetOwningPlayer<ACPP_PlayerController>();
 	}
-	if (IsValid(PlayerControllerRef))
+	if (PlayerControllerRef.IsValid())
 	{
 		bIsGamepadMode = PlayerControllerRef->GetIsGamepadMode();
 
@@ -146,13 +146,13 @@ void UWCPP_ConfigureLevelParams::NativeConstruct()
 	UCPP_StaticWidgetLibrary::ChangeButtonsEnabling(OpenPreviousPanelButton, false);
 	UCPP_StaticWidgetLibrary::ChangeImageVisibility(LB_Image, ESlateVisibility::Collapsed);
 
-	if (IsValid(PlayerControllerRef) && !PlayerControllerRef->GetCustomUserName().IsEmpty())
+	if (PlayerControllerRef.IsValid() && !PlayerControllerRef->GetCustomUserName().IsEmpty())
 	{
 		PanelsSwitcher->SetActiveWidget(ChoosePlayingMode_CanvasPanel);
 	}
 	else
 	{
-		if (IsValid(PlayerControllerRef) && PlayerControllerRef->CreateNotificationDelegate.IsBound())
+		if (PlayerControllerRef.IsValid() && PlayerControllerRef->CreateNotificationDelegate.IsBound())
 		{
 			PlayerControllerRef->CreateNotificationDelegate.Execute(EnterNicknameRulesInscription, 5.5f);
 		}
@@ -228,7 +228,7 @@ void UWCPP_ConfigureLevelParams::NativeConstruct()
 
 	//==========Fifth panel (PublicSessions_CanvasPanel)===========
 
-	if (IsValid(GameInstanceRef))
+	if (GameInstanceRef.IsValid())
 	{
 		DH_FindingSessionsCompleted = GameInstanceRef->FindingSessionsCompletedDelegate.AddUObject(
 			this, &UWCPP_ConfigureLevelParams::FindingSessionsCompleted);
@@ -250,7 +250,7 @@ void UWCPP_ConfigureLevelParams::NativeConstruct()
 
 	//==========Sixth panel (PrivateSession_CanvasPanel)===========
 
-	if (IsValid(GameInstanceRef))
+	if (GameInstanceRef.IsValid())
 	{
 		GameInstanceRef->FindingPrivateSessionFailedDelegate.BindUObject(
 			this, &UWCPP_ConfigureLevelParams::OnFindingPrivateSessionFailed);
@@ -266,7 +266,7 @@ void UWCPP_ConfigureLevelParams::NativeConstruct()
 
 	//=========Seventh panel (CreateSession_CanvasPanel)===========
 
-	if (IsValid(GameInstanceRef))
+	if (GameInstanceRef.IsValid())
 	{
 		GameInstanceRef->SessionCreationFailedDelegate.BindUObject(
 			this, &UWCPP_ConfigureLevelParams::SessionCreationFailed);
@@ -301,7 +301,7 @@ void UWCPP_ConfigureLevelParams::NativeConstruct()
 
 void UWCPP_ConfigureLevelParams::NativeDestruct()
 {
-	if (IsValid(PlayerControllerRef))
+	if (PlayerControllerRef.IsValid())
 	{
 		PlayerControllerRef->InputKeyWasPressedDelegate.Remove(DH_InputKeyWasPressed);
 		PlayerControllerRef->GamepadScrollDelegate.Remove(DH_GamepadScroll);
@@ -399,8 +399,6 @@ void UWCPP_ConfigureLevelParams::NativeDestruct()
 		GetWorld()->GetTimerManager().ClearTimer(TH_FindingAndJoiningToPrivateSessionUnusedWidgets);
 	}
 
-	//=========Seventh panel (CreateSession_CanvasPanel)===========
-
 	//============Eighth panel (ChooseLevel_CanvasPanel)===========
 
 	StartLevel1_Button->OnClicked.RemoveDynamic(
@@ -416,7 +414,7 @@ void UWCPP_ConfigureLevelParams::NativeDestruct()
 	StartRandomLevel_Button->OnClicked.RemoveDynamic(
 		this, &UWCPP_ConfigureLevelParams::StartRandomLevel_ButtonOnClick);
 
-	if (IsValid(GameInstanceRef))
+	if (GameInstanceRef.IsValid())
 	{
 		GameInstanceRef->JoiningSessionFailedDelegate.Unbind();
 		GameInstanceRef->SessionCreationFailedDelegate.Unbind();
@@ -436,13 +434,13 @@ void UWCPP_ConfigureLevelParams::RightArrowOnClick()
 		FString Name = InputName_EditableText->GetText().ToString();
 		if (!CheckNameCorrectness(Name))
 		{
-			if (IsValid(PlayerControllerRef) && PlayerControllerRef->CreateNotificationDelegate.IsBound())
+			if (PlayerControllerRef.IsValid() && PlayerControllerRef->CreateNotificationDelegate.IsBound())
 			{
 				PlayerControllerRef->CreateNotificationDelegate.Execute(EnterNicknameRulesInscription, 5.5f);
 			}
 			return;
 		}
-		if (IsValid(PlayerControllerRef))
+		if (PlayerControllerRef.IsValid())
 		{
 			PlayerControllerRef->SetCustomUserName(Name);
 			PlayerControllerRef->CallCollectingInfoForSavingItToFile();
@@ -566,34 +564,37 @@ void UWCPP_ConfigureLevelParams::InitVirtualKeyboard()
 		return;
 
 	if (VirtualKeyboardRef == nullptr &&
-		IsValid(PlayerControllerRef) &&
-		IsValid(GameInstanceRef))
+		PlayerControllerRef.IsValid() &&
+		GameInstanceRef.IsValid())
 	{
 		const FName Row = FName(TEXT("VirtualKeyboard"));
-		if (UClass* Class = GameInstanceRef->GetWidgetClassBySoftReference(
-			UCPP_StaticWidgetLibrary::GetSoftReferenceToWidgetBlueprintByRowName(
-				WidgetBlueprintsDataTable,
-				Row)))
+		if (IsValid(WidgetBlueprintsDataTable.LoadSynchronous()))
 		{
-			VirtualKeyboardRef = CreateWidget<UWCPP_VirtualKeyboard>(PlayerControllerRef, Class);
-			if (IsValid(VirtualKeyboardRef))
+			if (UClass* Class = GameInstanceRef->GetWidgetClassBySoftReference(
+				UCPP_StaticWidgetLibrary::GetSoftReferenceToWidgetBlueprintByRowName(
+					WidgetBlueprintsDataTable.Get(),
+					Row)))
 			{
-				OnOffVirtualKeyboard_EnterName_TB->SetText(OffVirtualKeyboardInscription);
-				OnOffVirtualKeyboard_PrivateSession_TB->SetText(OffVirtualKeyboardInscription);
+				VirtualKeyboardRef = CreateWidget<UWCPP_VirtualKeyboard>(PlayerControllerRef.Get(), Class);
+				if (IsValid(VirtualKeyboardRef))
+				{
+					OnOffVirtualKeyboard_EnterName_TB->SetText(OffVirtualKeyboardInscription);
+					OnOffVirtualKeyboard_PrivateSession_TB->SetText(OffVirtualKeyboardInscription);
 
-				VirtualKeyboardRef->SetFlags(RF_StrongRefOnFrame);
-				VirtualKeyboardRef->SetGameInstanceRef(GameInstanceRef);
-				VirtualKeyboardRef->SetPlayerControllerRef(PlayerControllerRef);
-				DH_TypeSymbol = VirtualKeyboardRef->TypeSymbolDelegate.AddUObject(
-					this, &UWCPP_ConfigureLevelParams::SymbolWasTypedByVirtualKeyboard);
-				DH_RemoveSymbol = VirtualKeyboardRef->RemoveSymbolDelegate.AddUObject(
-					this, &UWCPP_ConfigureLevelParams::SymbolWasRemovedByVirtualKeyboard);
-				DH_EnterWasPressed = VirtualKeyboardRef->EnterWasPressedDelegate.AddUObject(
-					this, &UWCPP_ConfigureLevelParams::EnterWasPressedByVirtualKeyboard);
-				DH_ClosingKeyboard = VirtualKeyboardRef->ClosingKeyboardDelegate.AddUObject(
-					this, &UWCPP_ConfigureLevelParams::DestroyVirtualKeyboard);
-				VirtualKeyboardSizeBox->AddChild(VirtualKeyboardRef);
-				VirtualKeyboardRef->Btn_Digit_1->SetKeyboardFocus();
+					VirtualKeyboardRef->SetFlags(RF_StrongRefOnFrame);
+					VirtualKeyboardRef->SetGameInstanceRef(GameInstanceRef.Get());
+					VirtualKeyboardRef->SetPlayerControllerRef(PlayerControllerRef.Get());
+					DH_TypeSymbol = VirtualKeyboardRef->TypeSymbolDelegate.AddUObject(
+						this, &UWCPP_ConfigureLevelParams::SymbolWasTypedByVirtualKeyboard);
+					DH_RemoveSymbol = VirtualKeyboardRef->RemoveSymbolDelegate.AddUObject(
+						this, &UWCPP_ConfigureLevelParams::SymbolWasRemovedByVirtualKeyboard);
+					DH_EnterWasPressed = VirtualKeyboardRef->EnterWasPressedDelegate.AddUObject(
+						this, &UWCPP_ConfigureLevelParams::EnterWasPressedByVirtualKeyboard);
+					DH_ClosingKeyboard = VirtualKeyboardRef->ClosingKeyboardDelegate.AddUObject(
+						this, &UWCPP_ConfigureLevelParams::DestroyVirtualKeyboard);
+					VirtualKeyboardSizeBox->AddChild(VirtualKeyboardRef);
+					VirtualKeyboardRef->Btn_Digit_1->SetKeyboardFocus();
+				}
 			}
 		}
 	}
@@ -825,7 +826,7 @@ void UWCPP_ConfigureLevelParams::DecrementLocalPlayersNumberButtonOnClick()
 	}
 	if (AvailablePanelsNumber < 1)
 	{
-		if (IsValid(PlayerControllerRef) && PlayerControllerRef->CreateNotificationDelegate.IsBound())
+		if (PlayerControllerRef.IsValid() && PlayerControllerRef->CreateNotificationDelegate.IsBound())
 		{
 			PlayerControllerRef->CreateNotificationDelegate.Execute(AllGamepadsWereDisconnectedInscription, 3.5f);
 		}
@@ -864,7 +865,7 @@ void UWCPP_ConfigureLevelParams::IncrementLocalPlayersNumberButtonOnClick()
 	}
 	if (AvailablePanelsNumber < 1)
 	{
-		if (IsValid(PlayerControllerRef) && PlayerControllerRef->CreateNotificationDelegate.IsBound())
+		if (PlayerControllerRef.IsValid() && PlayerControllerRef->CreateNotificationDelegate.IsBound())
 		{
 			PlayerControllerRef->CreateNotificationDelegate.Execute(AllGamepadsWereDisconnectedInscription, 3.5f);
 		}
@@ -1118,7 +1119,7 @@ void UWCPP_ConfigureLevelParams::OpenPrivateSessionPanelButtonOnClick()
 
 void UWCPP_ConfigureLevelParams::OpenCreateSessionPanelButtonOnClick()
 {
-	if (IsValid(GameInstanceRef) && GameInstanceRef->IsPlayerLoggedInDelegate.IsBound())
+	if (GameInstanceRef.IsValid() && GameInstanceRef->IsPlayerLoggedInDelegate.IsBound())
 	{
 		if (!GameInstanceRef->IsPlayerLoggedInDelegate.Execute())
 		{
@@ -1146,7 +1147,7 @@ void UWCPP_ConfigureLevelParams::OpenCreateSessionPanelButtonOnClick()
 
 void UWCPP_ConfigureLevelParams::FindPublicSessionsButtonOnClick()
 {
-	if (IsValid(GameInstanceRef) && GameInstanceRef->IsPlayerLoggedInDelegate.IsBound())
+	if (GameInstanceRef.IsValid() && GameInstanceRef->IsPlayerLoggedInDelegate.IsBound())
 	{
 		if (!GameInstanceRef->IsPlayerLoggedInDelegate.Execute())
 		{
@@ -1157,7 +1158,7 @@ void UWCPP_ConfigureLevelParams::FindPublicSessionsButtonOnClick()
 		}
 		else
 		{
-			if (IsValid(GameInstanceRef) && GameInstanceRef->StartFindingSessionsDelegate.IsBound())
+			if (GameInstanceRef.IsValid() && GameInstanceRef->StartFindingSessionsDelegate.IsBound())
 			{
 				GameInstanceRef->StartFindingSessionsDelegate.Execute(GameInstanceRef->GetFirstGamePlayer()->
 				                                                      GetUniqueNetIdForPlatformUser(),
@@ -1177,9 +1178,9 @@ void UWCPP_ConfigureLevelParams::FindPublicSessionsButtonOnClick()
 				                                                  ESlateVisibility::Visible);
 				if (bIsGamepadMode && FindPublicSessionsButton->HasAnyUserFocus())
 				{
-					if (IsValid(PlayerControllerRef))
+					if (PlayerControllerRef.IsValid())
 					{
-						CancelFindingPublicSessionsButton->SetUserFocus(PlayerControllerRef);
+						CancelFindingPublicSessionsButton->SetUserFocus(PlayerControllerRef.Get());
 					}
 					else
 					{
@@ -1193,7 +1194,7 @@ void UWCPP_ConfigureLevelParams::FindPublicSessionsButtonOnClick()
 
 void UWCPP_ConfigureLevelParams::CancelFindingPublicSessionsButtonOnClick()
 {
-	if (IsValid(GameInstanceRef) && GameInstanceRef->CancelFindingSessionsDelegate.IsBound())
+	if (GameInstanceRef.IsValid() && GameInstanceRef->CancelFindingSessionsDelegate.IsBound())
 	{
 		GameInstanceRef->CancelFindingSessionsDelegate.Execute();
 	}
@@ -1201,9 +1202,9 @@ void UWCPP_ConfigureLevelParams::CancelFindingPublicSessionsButtonOnClick()
 
 	if (bIsGamepadMode && CancelFindingPublicSessionsButton->HasAnyUserFocus())
 	{
-		if (IsValid(PlayerControllerRef))
+		if (PlayerControllerRef.IsValid())
 		{
-			FindPublicSessionsButton->SetUserFocus(PlayerControllerRef);
+			FindPublicSessionsButton->SetUserFocus(PlayerControllerRef.Get());
 		}
 		else
 		{
@@ -1222,7 +1223,7 @@ void UWCPP_ConfigureLevelParams::CancelFindingPublicSessionsButtonOnClick()
 	                                       0.02f,
 	                                       false);
 
-	if (IsValid(PlayerControllerRef) && PlayerControllerRef->CreateNotificationDelegate.IsBound())
+	if (PlayerControllerRef.IsValid() && PlayerControllerRef->CreateNotificationDelegate.IsBound())
 	{
 		PlayerControllerRef->CreateNotificationDelegate.Execute(CancelFindingPublicSessionsInscription, 3.5f);
 	}
@@ -1232,9 +1233,9 @@ void UWCPP_ConfigureLevelParams::FindingSessionsCompleted(const TSharedPtr<FOnli
 {
 	if (bIsGamepadMode && CancelFindingPublicSessionsButton->HasAnyUserFocus())
 	{
-		if (IsValid(PlayerControllerRef))
+		if (PlayerControllerRef.IsValid())
 		{
-			FindPublicSessionsButton->SetUserFocus(PlayerControllerRef);
+			FindPublicSessionsButton->SetUserFocus(PlayerControllerRef.Get());
 		}
 		else
 		{
@@ -1245,18 +1246,18 @@ void UWCPP_ConfigureLevelParams::FindingSessionsCompleted(const TSharedPtr<FOnli
 
 	if (FoundSessions == nullptr)
 	{
-		if (IsValid(PlayerControllerRef) && PlayerControllerRef->CreateNotificationDelegate.IsBound())
+		if (PlayerControllerRef.IsValid() && PlayerControllerRef->CreateNotificationDelegate.IsBound())
 		{
 			PlayerControllerRef->CreateNotificationDelegate.Execute(NoPublicSessionsFoundInscription, 3.5f);
 		}
 	}
 	else if (FoundSessions.IsValid() &&
-		IsValid(PlayerControllerRef) &&
-		IsValid(GameInstanceRef))
+		PlayerControllerRef.IsValid() &&
+		GameInstanceRef.IsValid())
 	{
 		if (FoundSessions->SearchResults.Num() <= 0)
 		{
-			if (IsValid(PlayerControllerRef) && PlayerControllerRef->CreateNotificationDelegate.IsBound())
+			if (PlayerControllerRef.IsValid() && PlayerControllerRef->CreateNotificationDelegate.IsBound())
 			{
 				PlayerControllerRef->CreateNotificationDelegate.Execute(NoPublicSessionsFoundInscription, 3.5f);
 			}
@@ -1264,28 +1265,32 @@ void UWCPP_ConfigureLevelParams::FindingSessionsCompleted(const TSharedPtr<FOnli
 		else
 		{
 			const FName Row = FName(TEXT("PublicSessionInfo"));
-			if (UClass* Class = GameInstanceRef->GetWidgetClassBySoftReference(
-				UCPP_StaticWidgetLibrary::GetSoftReferenceToWidgetBlueprintByRowName(
-					WidgetBlueprintsDataTable,
-					Row)))
+			if (IsValid(WidgetBlueprintsDataTable.LoadSynchronous()))
 			{
-				for (int32 SearchIdx = 0; SearchIdx < FoundSessions->SearchResults.Num(); SearchIdx++)
+				if (UClass* Class = GameInstanceRef->GetWidgetClassBySoftReference(
+					UCPP_StaticWidgetLibrary::GetSoftReferenceToWidgetBlueprintByRowName(
+						WidgetBlueprintsDataTable.Get(),
+						Row)))
 				{
-					if (UWCPP_PublicSessionInfo* PublicSessionInfo_Widget = CreateWidget<UWCPP_PublicSessionInfo>(
-							PlayerControllerRef, Class);
-						IsValid(PublicSessionInfo_Widget))
+					for (int32 SearchIdx = 0; SearchIdx < FoundSessions->SearchResults.Num(); SearchIdx++)
 					{
-						PublicSessionInfo_Widget->SetFlags(RF_StrongRefOnFrame);
-						PublicSessionInfo_Widget->SessionName = FName(
-							FoundSessions->SearchResults[SearchIdx].Session.SessionSettings.
-							                                        Settings.FindRef(
-								                                        FName("SESSION_NAME")).Data.ToString());
-						PublicSessionInfo_Widget->SessionNumber = SearchIdx + 1;
-						PublicSessionInfo_Widget->UserId = FoundSessions->SearchResults[SearchIdx].Session.OwningUserId;
-						PublicSessionInfo_Widget->SearchResult = FoundSessions->SearchResults[SearchIdx];
-						PublicSessionInfo_Widget->PassSessionInfoDelegate.BindUObject(
-							this, &UWCPP_ConfigureLevelParams::GetOneSessionInfo);
-						PublicSessionsScrollBox->AddChild(PublicSessionInfo_Widget);
+						if (UWCPP_PublicSessionInfo* PublicSessionInfo_Widget = CreateWidget<UWCPP_PublicSessionInfo>(
+								PlayerControllerRef.Get(), Class);
+							IsValid(PublicSessionInfo_Widget))
+						{
+							PublicSessionInfo_Widget->SetFlags(RF_StrongRefOnFrame);
+							PublicSessionInfo_Widget->SessionName = FName(
+								FoundSessions->SearchResults[SearchIdx].Session.SessionSettings.
+								                                        Settings.FindRef(
+									                                        FName("SESSION_NAME")).Data.ToString());
+							PublicSessionInfo_Widget->SessionNumber = SearchIdx + 1;
+							PublicSessionInfo_Widget->UserId = FoundSessions->SearchResults[SearchIdx].Session.
+								OwningUserId;
+							PublicSessionInfo_Widget->SearchResult = FoundSessions->SearchResults[SearchIdx];
+							PublicSessionInfo_Widget->PassSessionInfoDelegate.BindUObject(
+								this, &UWCPP_ConfigureLevelParams::GetOneSessionInfo);
+							PublicSessionsScrollBox->AddChild(PublicSessionInfo_Widget);
+						}
 					}
 				}
 			}
@@ -1331,8 +1336,8 @@ void UWCPP_ConfigureLevelParams::GetOneSessionInfo(const int32 SessionNumber,
 	ChosenPublicSessionName = SessionName;
 	ChosenPublicSessionSearchResult = SearchResult;
 	FString NameToPrint = ChosenPublicSessionName.ToString();
-	const int32 StrLen = NameToPrint.Len();
-	if (StrLen >= 6)
+	if (const int32 StrLen = NameToPrint.Len();
+		StrLen >= 6)
 	{
 		NameToPrint.RemoveAt(5, StrLen - 5, true);
 		NameToPrint.Append(TEXT("..."));
@@ -1346,7 +1351,7 @@ void UWCPP_ConfigureLevelParams::ConnectToPublicSessionButtonOnClick()
 {
 	if (ChosenPublicSessionNumber == -1)
 	{
-		if (IsValid(PlayerControllerRef) && PlayerControllerRef->CreateNotificationDelegate.IsBound())
+		if (PlayerControllerRef.IsValid() && PlayerControllerRef->CreateNotificationDelegate.IsBound())
 		{
 			PlayerControllerRef->CreateNotificationDelegate.Execute(NoAvailableSessionToConnectInscription, 3.5f);
 		}
@@ -1417,7 +1422,7 @@ void UWCPP_ConfigureLevelParams::JoiningToPublicSessionFailed()
 		                                       0.5f,
 		                                       false);
 
-		if (IsValid(PlayerControllerRef) && PlayerControllerRef->CreateNotificationDelegate.IsBound())
+		if (PlayerControllerRef.IsValid() && PlayerControllerRef->CreateNotificationDelegate.IsBound())
 		{
 			PlayerControllerRef->CreateNotificationDelegate.Execute(JoiningToPublicSessionFailedInscription, 3.5f);
 		}
@@ -1442,7 +1447,7 @@ void UWCPP_ConfigureLevelParams::ClearJoiningToPublicSessionUnusedWidgets()
 
 void UWCPP_ConfigureLevelParams::ConnectToPrivateSessionButtonOnClick()
 {
-	if (IsValid(GameInstanceRef) && GameInstanceRef->IsPlayerLoggedInDelegate.IsBound())
+	if (GameInstanceRef.IsValid() && GameInstanceRef->IsPlayerLoggedInDelegate.IsBound())
 	{
 		if (!GameInstanceRef->IsPlayerLoggedInDelegate.Execute())
 		{
@@ -1471,9 +1476,9 @@ void UWCPP_ConfigureLevelParams::ConnectToPrivateSessionButtonOnClick()
 				UCPP_StaticWidgetLibrary::ChangeButtonsEnabling(CancelFindingPrivateSessionButton, true);
 				if (bIsGamepadMode)
 				{
-					if (IsValid(PlayerControllerRef))
+					if (PlayerControllerRef.IsValid())
 					{
-						CancelFindingPrivateSessionButton->SetUserFocus(PlayerControllerRef);
+						CancelFindingPrivateSessionButton->SetUserFocus(PlayerControllerRef.Get());
 					}
 					else
 					{
@@ -1502,7 +1507,7 @@ void UWCPP_ConfigureLevelParams::ConnectToPrivateSessionButtonOnClick()
 
 void UWCPP_ConfigureLevelParams::CancelFindingPrivateSessionButtonOnClick()
 {
-	if (IsValid(GameInstanceRef) && GameInstanceRef->CancelFindingSessionsDelegate.IsBound())
+	if (GameInstanceRef.IsValid() && GameInstanceRef->CancelFindingSessionsDelegate.IsBound())
 	{
 		GameInstanceRef->CancelFindingSessionsDelegate.Execute();
 	}
@@ -1522,9 +1527,9 @@ void UWCPP_ConfigureLevelParams::CancelFindingPrivateSessionButtonOnClick()
 
 	if (bIsGamepadMode)
 	{
-		if (IsValid(PlayerControllerRef))
+		if (PlayerControllerRef.IsValid())
 		{
-			ConnectToPrivateSessionButton->SetUserFocus(PlayerControllerRef);
+			ConnectToPrivateSessionButton->SetUserFocus(PlayerControllerRef.Get());
 		}
 		else
 		{
@@ -1532,7 +1537,7 @@ void UWCPP_ConfigureLevelParams::CancelFindingPrivateSessionButtonOnClick()
 		}
 	}
 	bIsJoiningToPrivateSession = false;
-	if (IsValid(PlayerControllerRef) && PlayerControllerRef->CreateNotificationDelegate.IsBound())
+	if (PlayerControllerRef.IsValid() && PlayerControllerRef->CreateNotificationDelegate.IsBound())
 	{
 		PlayerControllerRef->CreateNotificationDelegate.Execute(CancelFindingPrivateSessionInscription, 3.5f);
 	}
@@ -1555,9 +1560,9 @@ void UWCPP_ConfigureLevelParams::OnFindingPrivateSessionFailed()
 
 	if (bIsGamepadMode)
 	{
-		if (IsValid(PlayerControllerRef))
+		if (PlayerControllerRef.IsValid())
 		{
-			ConnectToPrivateSessionButton->SetUserFocus(PlayerControllerRef);
+			ConnectToPrivateSessionButton->SetUserFocus(PlayerControllerRef.Get());
 		}
 		else
 		{
@@ -1565,7 +1570,7 @@ void UWCPP_ConfigureLevelParams::OnFindingPrivateSessionFailed()
 		}
 	}
 	bIsJoiningToPrivateSession = false;
-	if (IsValid(PlayerControllerRef) && PlayerControllerRef->CreateNotificationDelegate.IsBound())
+	if (PlayerControllerRef.IsValid() && PlayerControllerRef->CreateNotificationDelegate.IsBound())
 	{
 		PlayerControllerRef->CreateNotificationDelegate.Execute(FindingPrivateSessionFailedInscription, 6.5f);
 	}
@@ -1591,16 +1596,16 @@ void UWCPP_ConfigureLevelParams::JoiningToPrivateSessionFailed()
 
 		if (bIsGamepadMode)
 		{
-			if (IsValid(PlayerControllerRef))
+			if (PlayerControllerRef.IsValid())
 			{
-				ConnectToPrivateSessionButton->SetUserFocus(PlayerControllerRef);
+				ConnectToPrivateSessionButton->SetUserFocus(PlayerControllerRef.Get());
 			}
 			else
 			{
 				ConnectToPrivateSessionButton->SetKeyboardFocus();
 			}
 		}
-		if (IsValid(PlayerControllerRef) && PlayerControllerRef->CreateNotificationDelegate.IsBound())
+		if (PlayerControllerRef.IsValid() && PlayerControllerRef->CreateNotificationDelegate.IsBound())
 		{
 			PlayerControllerRef->CreateNotificationDelegate.Execute(JoiningToPrivateSessionFailedInscription, 3.5f);
 		}
@@ -1652,7 +1657,7 @@ void UWCPP_ConfigureLevelParams::CallServerCreation(const int32 LevelNumber) con
 
 void UWCPP_ConfigureLevelParams::SessionCreationFailed() const
 {
-	if (IsValid(PlayerControllerRef) && PlayerControllerRef->CreateNotificationDelegate.IsBound())
+	if (PlayerControllerRef.IsValid() && PlayerControllerRef->CreateNotificationDelegate.IsBound())
 	{
 		PlayerControllerRef->CreateNotificationDelegate.Execute(SessionCreationFailedInscription, 3.5f);
 	}
@@ -1692,20 +1697,12 @@ void UWCPP_ConfigureLevelParams::OnControllerConnectionChanged(EInputDeviceConne
                                                                FPlatformUserId PlatformUserId,
                                                                FInputDeviceId InputDeviceId)
 {
-	/*GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Magenta,
-	                                 FString::Printf(
-		                                 TEXT("UWCPP_ConfigureLevelParams::OnControllerConnectionChanged = %d"),
-		                                 NewConnectionState));*/
 	if (NewConnectionState == EInputDeviceConnectionState::Connected)
 	{
 		ChangeLocalMultiplayerCheckBoxEnabling(true);
 	}
 	else if (!UCPP_StaticLibrary::IsAnyGamepadConnected())
 	{
-		/*GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Magenta,
-		                                 FString::Printf(
-			                                 TEXT(
-				                                 "UWCPP_ConfigureLevelParams::OnControllerConnectionChanged, IsAnyGamepadConnected() = FALSE")));*/
 		ChangeLocalMultiplayerCheckBoxEnabling(false);
 		SplitscreenType = 0;
 		NumberOfPlayers = 1;
@@ -1722,10 +1719,6 @@ void UWCPP_ConfigureLevelParams::OnControllerConnectionChanged(EInputDeviceConne
 	}
 	else
 	{
-		/*GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Magenta,
-		                                 FString::Printf(
-			                                 TEXT(
-				                                 "UWCPP_ConfigureLevelParams::OnControllerConnectionChanged, IsAnyGamepadConnected() = TRUE")));*/
 		int32 MaxPlayersNumber;
 		if (UseKeyboardForFirstPlayer_CheckBox->IsChecked())
 		{
@@ -1839,49 +1832,49 @@ void UWCPP_ConfigureLevelParams::SetFocusForGamepadMode()
 	if (!bIsWidgetActive)
 		return;
 
-	if (IsValid(PlayerControllerRef))
+	if (PlayerControllerRef.IsValid())
 	{
 		if (PanelsSwitcher->GetActiveWidget() == ChoosePlayingMode_CanvasPanel)
 		{
-			SingleMode_CheckBox->SetUserFocus(PlayerControllerRef);
+			SingleMode_CheckBox->SetUserFocus(PlayerControllerRef.Get());
 		}
 		else if (PanelsSwitcher->GetActiveWidget() == ChooseLocalPlayers_CanvasPanel)
 		{
-			UseKeyboardForFirstPlayer_CheckBox->SetUserFocus(PlayerControllerRef);
+			UseKeyboardForFirstPlayer_CheckBox->SetUserFocus(PlayerControllerRef.Get());
 		}
 		else if (PanelsSwitcher->GetActiveWidget() == ChooseOnlineMultiplayerPage_CanvasPanel)
 		{
-			OpenPublicSessionsPanelButton->SetUserFocus(PlayerControllerRef);
+			OpenPublicSessionsPanelButton->SetUserFocus(PlayerControllerRef.Get());
 		}
 		else if (PanelsSwitcher->GetActiveWidget() == PublicSessions_CanvasPanel)
 		{
 			if (FindPublicSessionsButton->GetIsEnabled())
 			{
-				FindPublicSessionsButton->SetUserFocus(PlayerControllerRef);
+				FindPublicSessionsButton->SetUserFocus(PlayerControllerRef.Get());
 			}
 			else
 			{
-				CancelFindingPublicSessionsButton->SetUserFocus(PlayerControllerRef);
+				CancelFindingPublicSessionsButton->SetUserFocus(PlayerControllerRef.Get());
 			}
 		}
 		else if (PanelsSwitcher->GetActiveWidget() == PrivateSession_CanvasPanel)
 		{
 			if (ConnectToPrivateSessionButton->GetIsEnabled())
 			{
-				ConnectToPrivateSessionButton->SetUserFocus(PlayerControllerRef);
+				ConnectToPrivateSessionButton->SetUserFocus(PlayerControllerRef.Get());
 			}
 			else
 			{
-				CancelFindingPrivateSessionButton->SetUserFocus(PlayerControllerRef);
+				CancelFindingPrivateSessionButton->SetUserFocus(PlayerControllerRef.Get());
 			}
 		}
 		else if (PanelsSwitcher->GetActiveWidget() == CreateSession_CanvasPanel)
 		{
-			MaxPlayersNumOnServer_ComboBox->SetUserFocus(PlayerControllerRef);
+			MaxPlayersNumOnServer_ComboBox->SetUserFocus(PlayerControllerRef.Get());
 		}
 		else if (PanelsSwitcher->GetActiveWidget() == ChooseLevel_CanvasPanel)
 		{
-			StartLevel1_Button->SetUserFocus(PlayerControllerRef);
+			StartLevel1_Button->SetUserFocus(PlayerControllerRef.Get());
 		}
 	}
 	else
@@ -2014,12 +2007,12 @@ void UWCPP_ConfigureLevelParams::RT_Pressed()
 
 bool UWCPP_ConfigureLevelParams::CheckLevelAvailability(const int32 LevelNumber) const
 {
-	if (const int32 MaxAvailableLevel = IsValid(PlayerControllerRef)
+	if (const int32 MaxAvailableLevel = PlayerControllerRef.IsValid()
 		                                    ? PlayerControllerRef->GetMaxOpenedLevelNumber()
 		                                    : 1;
 		LevelNumber > MaxAvailableLevel || LevelNumber < 1)
 	{
-		if (IsValid(PlayerControllerRef) && PlayerControllerRef->CreateNotificationDelegate.IsBound())
+		if (PlayerControllerRef.IsValid() && PlayerControllerRef->CreateNotificationDelegate.IsBound())
 		{
 			PlayerControllerRef->CreateNotificationDelegate.Execute(LevelIsUnavailableInscription, 3.5f);
 		}
@@ -2053,7 +2046,7 @@ bool UWCPP_ConfigureLevelParams::CanStartGame(const int32 LevelNumber)
 		}
 		bSuccess = NumberOfPlayers <= NumberOfAvailableDevices;
 
-		if (IsValid(PlayerControllerRef) && PlayerControllerRef->CreateNotificationDelegate.IsBound())
+		if (PlayerControllerRef.IsValid() && PlayerControllerRef->CreateNotificationDelegate.IsBound())
 		{
 			PlayerControllerRef->CreateNotificationDelegate.Execute(SmallConnectedDevicesAmountInscription, 3.5f);
 		}
@@ -2074,12 +2067,12 @@ bool UWCPP_ConfigureLevelParams::CanStartGame(const int32 LevelNumber)
 
 void UWCPP_ConfigureLevelParams::StartGame(const int32 LevelNumber)
 {
-	if (!CanStartGame(LevelNumber) || !IsValid(GameInstanceRef))
+	if (!CanStartGame(LevelNumber) || !GameInstanceRef.IsValid())
 		return;
 
 	ChosenLevelNumber = LevelNumber;
 
-	if (IsValid(PlayerControllerRef))
+	if (PlayerControllerRef.IsValid())
 	{
 		PlayerControllerRef->CallCollectingInfoForSavingItToFile();
 	}

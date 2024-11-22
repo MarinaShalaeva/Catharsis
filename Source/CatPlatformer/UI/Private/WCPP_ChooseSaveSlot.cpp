@@ -46,11 +46,11 @@ void UWCPP_ChooseSaveSlot::NativeConstruct()
 {
 	Super::NativeConstruct();
 
-	if (!IsValid(PlayerControllerRef))
+	if (!PlayerControllerRef.IsValid())
 	{
 		PlayerControllerRef = Cast<ACPP_PlayerController>(GetOwningPlayer());
 	}
-	if (IsValid(PlayerControllerRef))
+	if (PlayerControllerRef.IsValid())
 	{
 		bIsGamepadMode = PlayerControllerRef->GetIsGamepadMode();
 		if (bIsGamepadMode)
@@ -74,7 +74,7 @@ void UWCPP_ChooseSaveSlot::NativeConstruct()
 	DeleteSaveButton->OnClicked.AddDynamic(this, &UWCPP_ChooseSaveSlot::DeleteSlotInfo);
 	ExitButton->OnClicked.AddDynamic(this, &UWCPP_ChooseSaveSlot::ExitButtonOnClick);
 
-	if (!IsValid(GameInstanceRef))
+	if (!GameInstanceRef.IsValid())
 	{
 		GameInstanceRef = Cast<UCPP_GameInstance>(GetGameInstance());
 	}
@@ -140,7 +140,7 @@ void UWCPP_ChooseSaveSlot::NativeDestruct()
 		GetWorld()->GetTimerManager().ClearTimer(TH_CheckGamepadFocus);
 	}
 
-	if (IsValid(PlayerControllerRef))
+	if (PlayerControllerRef.IsValid())
 	{
 		PlayerControllerRef->InputKeyWasPressedDelegate.Remove(DH_InputKeyWasPressed);
 		DH_InputKeyWasPressed.Reset();
@@ -336,13 +336,13 @@ void UWCPP_ChooseSaveSlot::ChangeButtonColor(UButton* Button, const bool bNormal
 
 void UWCPP_ChooseSaveSlot::CreateOrLoadSlot()
 {
-	if (ChosenSaveSlot != 0 && IsValid(GameInstanceRef))
+	if (ChosenSaveSlot != 0 && GameInstanceRef.IsValid())
 	{
 		GameInstanceRef->GetSaveManager()->ChooseSaveSlot(ChosenSaveSlot);
 		if (GameInstanceRef->GetSaveManager()->DoesSaveSlotExist())
 		{
 			GameInstanceRef->GetSaveManager()->LoadOrCreateSaveGameObject();
-			if (IsValid(PlayerControllerRef))
+			if (PlayerControllerRef.IsValid())
 			{
 				PlayerControllerRef->CallLoadingInfoFromSaveFile();
 			}
@@ -350,7 +350,7 @@ void UWCPP_ChooseSaveSlot::CreateOrLoadSlot()
 		else
 		{
 			GameInstanceRef->GetSaveManager()->LoadOrCreateSaveGameObject();
-			if (IsValid(PlayerControllerRef))
+			if (PlayerControllerRef.IsValid())
 			{
 				// Is needed for applying the base values to the
 				// player state variables.
@@ -409,10 +409,10 @@ void UWCPP_ChooseSaveSlot::OpenMainMenu()
 void UWCPP_ChooseSaveSlot::ExitButtonOnClick()
 {
 	const UWorld* World = GetWorld();
-	if (PlayerControllerRef)
+	if (PlayerControllerRef.IsValid())
 	{
 		UKismetSystemLibrary::QuitGame(World,
-		                               PlayerControllerRef,
+		                               PlayerControllerRef.Get(),
 		                               EQuitPreference::Quit,
 		                               false);
 	}

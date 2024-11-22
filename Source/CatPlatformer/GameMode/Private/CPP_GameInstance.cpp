@@ -24,7 +24,7 @@ UCPP_GameInstance::UCPP_GameInstance()
 	bIsGamepadModeForPlayer0 = false;
 	CurrentSplitscreenType = 0;
 	MaxOnlinePlayersNumber = 2;
-	LevelNumber = 0;
+	LevelNumber = 1;
 	PlayersNumber = 1;
 	RoomNumber = 0;
 	CurrentSessionName = FString(TEXT("GameSession"));

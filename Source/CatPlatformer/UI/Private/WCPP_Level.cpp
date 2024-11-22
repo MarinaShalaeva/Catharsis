@@ -47,14 +47,14 @@ void UWCPP_Level::NativeConstruct()
 	NotWaitingForOtherPlayersButton->OnClicked.AddDynamic(this, &UWCPP_Level::NotWaitingForOtherPlayersButtonOnClick);
 	CopyRoomNumberButton->OnClicked.AddDynamic(this, &UWCPP_Level::CopyRoomNumberButtonOnClick);
 
-	if (!IsValid(GameInstanceRef))
+	if (!GameInstanceRef.IsValid())
 	{
 		GameInstanceRef = Cast<UCPP_GameInstance>(GetGameInstance());
 	}
 
-	if (!IsValid(PlayerControllerRef))
+	if (!PlayerControllerRef.IsValid())
 	{
-		if (IsValid(GameInstanceRef))
+		if (GameInstanceRef.IsValid())
 		{
 			if (GameInstanceRef->GetPlayingModeAsInt() == 1)
 			{
@@ -71,9 +71,9 @@ void UWCPP_Level::NativeConstruct()
 		}
 	}
 
-	if (IsValid(PlayerControllerRef))
+	if (PlayerControllerRef.IsValid())
 	{
-		if (IsValid(GameInstanceRef))
+		if (GameInstanceRef.IsValid())
 		{
 			if (GameInstanceRef->GetPlayingModeAsInt() == 1)
 			{
@@ -119,9 +119,9 @@ void UWCPP_Level::NativeConstruct()
 
 	GameStateRef = Cast<ACPP_GameState>(UGameplayStatics::GetGameState(GetWorld()));
 
-	if (IsValid(GameInstanceRef) && GameInstanceRef->GetPlayingModeAsInt() == 2)
+	if (GameInstanceRef.IsValid() && GameInstanceRef->GetPlayingModeAsInt() == 2)
 	{
-		if (IsValid(GameStateRef))
+		if (GameStateRef.IsValid())
 		{
 			DH_PlayersNumberChanged = GameStateRef->PlayersNumberChangedDelegate.AddUObject(
 				this, &UWCPP_Level::PlayersNumberWasChanged);
@@ -146,9 +146,9 @@ void UWCPP_Level::NativeDestruct()
 	                                 RemoveDynamic(this, &UWCPP_Level::NotWaitingForOtherPlayersButtonOnClick);
 	CopyRoomNumberButton->OnClicked.RemoveDynamic(this, &UWCPP_Level::CopyRoomNumberButtonOnClick);
 
-	if (IsValid(GameInstanceRef))
+	if (GameInstanceRef.IsValid())
 	{
-		if (IsValid(GameStateRef))
+		if (GameStateRef.IsValid())
 		{
 			if (GameInstanceRef->GetPlayingModeAsInt() == 2)
 			{
@@ -160,18 +160,17 @@ void UWCPP_Level::NativeDestruct()
 		GameInstanceRef = nullptr;
 	}
 
-	if (IsValid(PlayerControllerRef))
+	if (PlayerControllerRef.IsValid())
 	{
 		PlayerControllerRef->InputKeyWasPressedDelegate.Remove(DH_InputKeyWasPressed);
 		DH_InputKeyWasPressed.Reset();
-
-		PlayerControllerRef = nullptr;
 	}
 
-	if (IsValid(PlayerStateRef))
+	if (PlayerStateRef.IsValid())
 	{
 		PlayerStateRef->IncrementNumberOfStartedLevels();
-		PlayerStateRef->ScoreChangedDelegate.Unbind();
+		PlayerStateRef->ScoreChangedDelegate.Remove(DH_ScoreChanged);
+		DH_ScoreChanged.Reset();
 		PlayerStateRef->ShouldBeginCountdownToStartLevelDelegate.Remove(DH_ShouldBeginCountdownToStartLevel);
 		DH_ShouldBeginCountdownToStartLevel.Reset();
 	}
@@ -196,14 +195,15 @@ void UWCPP_Level::PlayerStateWasChanged(ACPP_PlayerState* NewPlayerState)
 	if (!IsValid(NewPlayerState))
 		return;
 
-	if (IsValid(PlayerStateRef))
+	if (PlayerStateRef.IsValid())
 	{
-		PlayerStateRef->ScoreChangedDelegate.Unbind();
+		PlayerStateRef->ScoreChangedDelegate.Remove(DH_ScoreChanged);
+		DH_ScoreChanged.Reset();
 		PlayerStateRef->ShouldBeginCountdownToStartLevelDelegate.Remove(DH_ShouldBeginCountdownToStartLevel);
 		DH_ShouldBeginCountdownToStartLevel.Reset();
 	}
 	PlayerStateRef = NewPlayerState;
-	PlayerStateRef->ScoreChangedDelegate.BindUObject(this, &UWCPP_Level::ChangeScore);
+	DH_ScoreChanged = PlayerStateRef->ScoreChangedDelegate.AddUObject(this, &UWCPP_Level::ChangeScore);
 	DH_ShouldBeginCountdownToStartLevel = PlayerStateRef->ShouldBeginCountdownToStartLevelDelegate.
 	                                                      AddUObject(this, &UWCPP_Level::BeginCountdownToStartLevel);
 }
@@ -254,15 +254,15 @@ void UWCPP_Level::ReadyForGameButtonOnClick()
 {
 	UCPP_StaticWidgetLibrary::ChangeButtonsEnabling(ReadyForGameButton, false);
 
-	if (IsValid(GameInstanceRef))
+	if (GameInstanceRef.IsValid())
 	{
 		if (GameInstanceRef->GetPlayingModeAsInt() == 2)
 		{
-			if (!IsValid(GameStateRef))
+			if (!GameStateRef.IsValid())
 			{
 				GameStateRef = Cast<ACPP_GameState>(UGameplayStatics::GetGameState(GetWorld()));
 			}
-			if (IsValid(GameStateRef))
+			if (GameStateRef.IsValid())
 			{
 				if (GameStateRef->PlayerArray.Num() < GameInstanceRef->GetMaxOnlinePlayersNumber())
 				{
@@ -288,7 +288,7 @@ void UWCPP_Level::ReadyForGameButtonOnClick()
 			bCursorShouldBeVisible = false;
 		}
 	}
-	if (IsValid(PlayerControllerRef))
+	if (PlayerControllerRef.IsValid())
 	{
 		PlayerControllerRef->SetPlayerIsReadyToStartGame(true);
 		PlayerControllerRef->ChangeCursorVisibility(bCursorShouldBeVisible);
@@ -301,7 +301,7 @@ void UWCPP_Level::PlayersNumberWasChanged_Implementation(const int32 NewPlayersN
 	TB_CurrentPlayersNumber_Keyboard->SetText(FText::AsNumber(NewPlayersNumber));
 	TB_CurrentPlayersNumber_Gamepad->SetText(FText::AsNumber(NewPlayersNumber));
 
-	if (IsValid(GameInstanceRef))
+	if (GameInstanceRef.IsValid())
 	{
 		if ((ReadyForGame_WidgetSwitcher->GetActiveWidgetIndex() == 2 ||
 				ReadyForGame_WidgetSwitcher->GetActiveWidgetIndex() == 3) &&
@@ -328,9 +328,9 @@ void UWCPP_Level::PlayersNumberWasChanged_Implementation(const int32 NewPlayersN
 
 void UWCPP_Level::NotWaitingForOtherPlayersButtonOnClick()
 {
-	if (IsValid(GameInstanceRef) && GameInstanceRef->GetPlayingModeAsInt() == 2 &&
-		IsValid(GameStateRef) && GameStateRef->PlayerArray.Num() <= 1 &&
-		IsValid(PlayerControllerRef) && PlayerControllerRef->CreateNotificationDelegate.IsBound())
+	if (GameInstanceRef.IsValid() && GameInstanceRef->GetPlayingModeAsInt() == 2 &&
+		GameStateRef.IsValid() && GameStateRef->PlayerArray.Num() <= 1 &&
+		PlayerControllerRef.IsValid() && PlayerControllerRef->CreateNotificationDelegate.IsBound())
 	{
 		PlayerControllerRef->CreateNotificationDelegate.Execute(OnlyOnePlayerOnServerInscription, 4.0f);
 		return;
@@ -338,7 +338,7 @@ void UWCPP_Level::NotWaitingForOtherPlayersButtonOnClick()
 
 	ReadyForGame_WidgetSwitcher->SetActiveWidgetIndex(4);
 	UCPP_StaticWidgetLibrary::ChangeButtonsEnabling(NotWaitingForOtherPlayersButton, false);
-	if (IsValid(PlayerControllerRef))
+	if (PlayerControllerRef.IsValid())
 	{
 		PlayerControllerRef->SetPlayerIsReadyToStartGame(true);
 	}
@@ -347,7 +347,7 @@ void UWCPP_Level::NotWaitingForOtherPlayersButtonOnClick()
 void UWCPP_Level::CopyRoomNumberButtonOnClick()
 {
 	FPlatformApplicationMisc::ClipboardCopy(*TB_RoomNumber->GetText().ToString());
-	if (IsValid(PlayerControllerRef) && PlayerControllerRef->CreateNotificationDelegate.IsBound())
+	if (PlayerControllerRef.IsValid() && PlayerControllerRef->CreateNotificationDelegate.IsBound())
 	{
 		PlayerControllerRef->CreateNotificationDelegate.Execute(RoomNumberWasCopiedInscription, 3.5f);
 	}
@@ -398,7 +398,7 @@ void UWCPP_Level::DecreaseTimerBeforeGameStartCounter()
 			1.0f,
 			false);
 		CallChangingDigitSizeAnimation();
-		if (TimerBeforeGameStartCounter == 0 && IsValid(PlayerControllerRef))
+		if (TimerBeforeGameStartCounter == 0 && PlayerControllerRef.IsValid())
 		{
 			PlayerControllerRef->bWaitingForReadinessToStartLevel = false;
 		}
@@ -427,7 +427,7 @@ void UWCPP_Level::AnyKeyPressed(const FKey& PressedKey)
 		bCursorShouldBeVisible = true;
 	}
 
-	if (IsValid(PlayerControllerRef) && PlayerControllerRef->IsPaused())
+	if (PlayerControllerRef.IsValid() && PlayerControllerRef->IsPaused())
 		return;
 
 	if (PressedKey == EKeys::Gamepad_FaceButton_Bottom || // A button.
@@ -495,7 +495,7 @@ void UWCPP_Level::PrepareWidgetForWorkingWithKeyboard()
 		CopyRoomNumber_WidgetSwitcher->SetActiveWidgetIndex(0);
 	}
 
-	if (IsValid(PlayerControllerRef))
+	if (PlayerControllerRef.IsValid())
 	{
 		PlayerControllerRef->ChangeCursorVisibility(bCursorShouldBeVisible);
 	}

@@ -55,12 +55,10 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
 	UBoxComponent* CollisionBox;
 
-	/** Reference to the instance of ACPP_GameMode class. */
-	UPROPERTY()
-	ACPP_GameMode* GameModeRef;
-	/** Reference to the instance of ACPP_GameState class. */
-	UPROPERTY()
-	ACPP_GameState* GameStateRef;
+	/** Weak pointer to the instance of ACPP_GameMode class. */
+	TWeakObjectPtr<ACPP_GameMode> GameModeRef;
+	/** Weak pointer to the instance of ACPP_GameState class. */
+	TWeakObjectPtr<ACPP_GameState> GameStateRef;
 
 	/**
 	 * Function for replying to the start of overlap with a

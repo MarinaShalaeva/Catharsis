@@ -41,9 +41,9 @@ void UWCPP_Statistics::NativeConstruct()
 {
 	Super::NativeConstruct();
 	
-	if (!IsValid(PlayerControllerRef))
+	if (!PlayerControllerRef.IsValid())
 	{
-		if (IsValid(GameInstanceRef))
+		if (GameInstanceRef.IsValid())
 		{
 			if (GameInstanceRef->GetPlayingModeAsInt() == 1)
 			{
@@ -60,7 +60,7 @@ void UWCPP_Statistics::NativeConstruct()
 		}
 	}
 
-	if (IsValid(PlayerControllerRef))
+	if (PlayerControllerRef.IsValid())
 	{
 		if (PlayerControllerRef->GetIsGamepadMode())
 		{
@@ -85,7 +85,7 @@ void UWCPP_Statistics::NativeConstruct()
 
 void UWCPP_Statistics::NativeDestruct()
 {
-	if (IsValid(PlayerControllerRef))
+	if (PlayerControllerRef.IsValid())
 	{
 		PlayerControllerRef->GamepadScrollDelegate.Remove(DH_GamepadScroll);
 		DH_GamepadScroll.Reset();
@@ -120,12 +120,12 @@ void UWCPP_Statistics::PlayerStateWasChanged(ACPP_PlayerState* NewPlayerState)
 	if (!IsValid(NewPlayerState))
 		return;
 
-	if (IsValid(PlayerStateRef))
+	if (PlayerStateRef.IsValid())
 	{
 		PlayerStateRef->TimeInGameChangedDelegate.Unbind();
 	}
 	PlayerStateRef = NewPlayerState;
-	if (IsValid(PlayerStateRef))
+	if (PlayerStateRef.IsValid())
 	{
 		PlayerStateRef->TimeInGameChangedDelegate.BindUObject(this, &UWCPP_Statistics::UpdateTimeInGameTextBlock);
 	}
@@ -134,7 +134,7 @@ void UWCPP_Statistics::PlayerStateWasChanged(ACPP_PlayerState* NewPlayerState)
 
 void UWCPP_Statistics::UpdateTextBlocks() const
 {
-	if (!IsValid(PlayerStateRef))
+	if (!PlayerStateRef.IsValid())
 		return;
 
 	FSaveSlot SaveSlot;

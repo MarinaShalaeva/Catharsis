@@ -56,15 +56,13 @@ protected:
 	//=================Objects instances===========================
 
 	/** Reference to the instance of UCPP_GameInstance class. */
-	UPROPERTY()
-	UCPP_GameInstance* GameInstanceRef;
+	TWeakObjectPtr<UCPP_GameInstance> GameInstanceRef;
 
 	/**
 	 * Reference to the instance of ACPP_PlayerController
 	 * class associated with current widget.
 	 */
-	UPROPERTY()
-	ACPP_PlayerController* PlayerControllerRef;
+	TWeakObjectPtr<ACPP_PlayerController> PlayerControllerRef;
 
 	/**
 	 * Delegate handle for storing the response on pressing

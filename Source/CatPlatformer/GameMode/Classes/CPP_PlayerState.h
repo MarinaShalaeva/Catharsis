@@ -26,8 +26,8 @@ DECLARE_MULTICAST_DELEGATE(FShouldBeginCountdownToStartLevel);
 
 DECLARE_MULTICAST_DELEGATE_OneParam(FDestroyLoadingScreen, const bool /* bShouldHideBackgroundImage */);
 
-DECLARE_DELEGATE_OneParam(FScoreChanged,
-                          const int32 /* ScoreToAdd */);
+DECLARE_MULTICAST_DELEGATE_OneParam(FScoreChanged,
+                                    const int32 /* ScoreToAdd */);
 
 DECLARE_MULTICAST_DELEGATE_OneParam(FLevelWasEnded, const bool /* Is Player A Winner? */);
 
@@ -61,9 +61,11 @@ class CATPLATFORMER_API ACPP_PlayerState : public APlayerState
 	 */
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
-	/** Reference to the instance of UCPP_GameInstance class. */
-	UPROPERTY()
-	UCPP_GameInstance* GameInstanceRef;
+	/**
+	 * Weak pointer to the instance of UCPP_GameInstance
+	 * class.
+	 */
+	TWeakObjectPtr<UCPP_GameInstance> GameInstanceRef;
 
 public:
 	/**
@@ -117,7 +119,9 @@ public:
 	bool LoadInfoFromSaveFile();
 
 	/** Function for saving current data structure to file. */
+	UFUNCTION(Client, Reliable)
 	void SaveDataToFile();
+	void SaveDataToFile_Implementation();
 
 	/**
 	 * Function for saving info about SFX and Music volumes
@@ -144,6 +148,7 @@ private:
 	void SetPlayerIsReadyToStartGame_Implementation(const bool bIsReady);
 
 	/** Structure for storing information about the player. */
+	UPROPERTY(Replicated)
 	FSaveSlot PlayerData;
 
 public:
@@ -358,6 +363,24 @@ private:
 	/** Timer Handle for incrementing TimeOnLevel variable. */
 	FTimerHandle TH_IncrementTimeOnLevel;
 
+public:
+	/**
+	 * Function for triggering the Destroy Loading Screen
+	 * Delegate.
+	 */
+	UFUNCTION(Client, Reliable)
+	void TriggerDestroyLoadingScreenDelegate(const bool bShouldHideBackgroundImage);
+	void TriggerDestroyLoadingScreenDelegate_Implementation(const bool bShouldHideBackgroundImage);
+
+	/**
+	 * Function for triggering the Should Begin Countdown
+	 * To Start Level Delegate.
+	 */
+	UFUNCTION(Client, Reliable)
+	void TriggerShouldBeginCountdownDelegate();
+	void TriggerShouldBeginCountdownDelegate_Implementation();
+
+private:
 	/**
 	 * Function for starting the TH_IncrementTimeOnLevel
 	 * timer.
@@ -392,34 +415,29 @@ public:
 	 * Setter for the UserScore variable.
 	 * @param NewValue Value to set to UserScore variable.
 	 */
-	/*UFUNCTION(NetMulticast, Reliable)
-	void Multicast_SetUserScore(const int32 NewValue);
-	void Multicast_SetUserScore_Implementation(const int32 NewValue);*/
-
-	UFUNCTION()
+	UFUNCTION(Server, Reliable)
 	void SetUserScore(const int32 NewValue);
+	void SetUserScore_Implementation(const int32 NewValue);
 
-	/*/**
-	 * Function for increasing the UserScore variable by
-	 * value from PointsToAdd parameter.
-	 * @param PointsToAdd That's how much needs to be added
-	 * to the UserScore variable.
-	#1#
+	/**
+	 * Function for adding (or removing) points to (or from)
+	 * score.
+	 * @param PointsToAdd Difference between old and new
+	 * score amount.
+	 */
 	UFUNCTION(Server, Reliable)
 	void AddNewPointsToUserScore(const int32 PointsToAdd);
+	void AddNewPointsToUserScore_Implementation(const int32 PointsToAdd);
 
-private:
-	void AddNewPointsToUserScore_Implementation(const int32 PointsToAdd);*/
-
-public:
-	UFUNCTION()
-	void AddNewPointsToUserScore(const int32 PointsToAdd);
-
-	/*UFUNCTION(Client, Reliable)
-	void Multicast_AddNewPointsToUserScore(const int32 PointsToAdd);
-
-private:
-	void Multicast_AddNewPointsToUserScore_Implementation(const int32 PointsToAdd);*/
+	/**
+	 * Function for triggering the delegate to notify widgets
+	 * about score changing.
+	 * @param PointsToAdd Difference between old and new
+	 * score amount.
+	 */
+	UFUNCTION(Client, Reliable)
+	void TriggerScoreChangedDelegate(const int32 PointsToAdd);
+	void TriggerScoreChangedDelegate_Implementation(const int32 PointsToAdd);
 
 	/** Getter for the GeneralScore variable. */
 	FORCEINLINE uint32 GetGeneralScore() const { return PlayerData.GeneralScore; }
@@ -432,6 +450,14 @@ private:
 	 * and setting this value to the GeneralScore variable.
 	 */
 	void AddCurrentScoreToGeneralScore();
+
+	/**
+	 * Function for broadcasting the Level Was Ended Delegate.
+	 * @param bIsWinner Is current player a winner?
+	 */
+	UFUNCTION(Client, Reliable)
+	void TriggerLevelWasEndedDelegate(const bool bIsWinner);
+	void TriggerLevelWasEndedDelegate_Implementation(const bool bIsWinner);
 
 private:
 	/** Timer Handle for incrementing TimeInGame variable. */

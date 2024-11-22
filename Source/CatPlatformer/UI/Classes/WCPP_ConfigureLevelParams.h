@@ -69,7 +69,7 @@ protected:
 	 * widgets' classes.
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Data Table")
-	UDataTable* WidgetBlueprintsDataTable;
+	TSoftObjectPtr<UDataTable> WidgetBlueprintsDataTable;
 
 	//================General UI elements==========================
 

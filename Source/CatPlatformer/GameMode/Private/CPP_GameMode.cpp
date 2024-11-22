@@ -94,11 +94,11 @@ AActor* ACPP_GameMode::ChoosePlayerStart_Implementation(AController* Player)
 {
 	AActor* PlayerStart = Super::ChoosePlayerStart_Implementation(Player);
 
-	if (!IsValid(GameStateRef))
+	if (!GameStateRef.IsValid())
 	{
 		GameStateRef = GetGameState<ACPP_GameState>();
 	}
-	if (IsValid(GameStateRef))
+	if (GameStateRef.IsValid())
 	{
 		const int32 CurrentPlayersNumber = GameStateRef->PlayerArray.Num();
 
@@ -190,11 +190,11 @@ void ACPP_GameMode::CallUpdatingAllCharactersAppearance_Implementation()
 	{
 		GetWorld()->GetTimerManager().ClearTimer(TH_CallUpdatingAllCharactersAppearance);
 	}
-	if (!IsValid(GameStateRef))
+	if (!GameStateRef.IsValid())
 	{
 		GameStateRef = GetGameState<ACPP_GameState>();
 	}
-	if (IsValid(GameStateRef))
+	if (GameStateRef.IsValid())
 	{
 		GameStateRef->UpdateAllCharactersAppearance();
 	}
@@ -207,7 +207,6 @@ void ACPP_GameMode::RespawnPlayer_Implementation(AController* Controller)
 
 	const FTransform Transform = FindPlayerStart(PC)->GetTransform();
 
-	//UMaterialInstance* Color = nullptr;
 	uint8 ColorIndex = 0;
 	if (ACPP_PlayerState* PS = PC->GetPlayerState<ACPP_PlayerState>())
 	{
@@ -216,12 +215,10 @@ void ACPP_GameMode::RespawnPlayer_Implementation(AController* Controller)
 
 	if (PC->GetCharacterRef())
 	{
-		//Color = PC->GetCharacterRef()->CurrentColor;
 		PC->GetCharacterRef()->Destroy();
 	}
 	else if (ACPP_Character* OldCharacter = Cast<ACPP_Character>(PC->GetPawn()))
 	{
-		//Color = OldCharacter->CurrentColor;
 		OldCharacter->Destroy();
 	}
 	else if (APawn* Pawn = PC->GetPawn())
@@ -234,14 +231,8 @@ void ACPP_GameMode::RespawnPlayer_Implementation(AController* Controller)
 		nullptr, nullptr,
 		ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn))
 	{
-		//Character->CurrentColor = Color;
-		//Character->ChangeCatsColor(Color);
 		Character->SetCurrentColorMaterialByIndex(ColorIndex);
 		Character->SetCurrentColorVariableByIndex(ColorIndex);
-		/*if (const ACPP_PlayerState* PS = Character->GetPlayerState<ACPP_PlayerState>())
-		{
-			PS->UpdateCatsColorUpToSavedIndex();
-		}*/
 
 		UGameplayStatics::FinishSpawningActor(Character, Transform);
 		PC->Possess(Character);
@@ -250,11 +241,11 @@ void ACPP_GameMode::RespawnPlayer_Implementation(AController* Controller)
 
 void ACPP_GameMode::CallSessionEnding_Implementation()
 {
-	if (!IsValid(GameStateRef))
+	if (!GameStateRef.IsValid())
 	{
 		GameStateRef = GetGameState<ACPP_GameState>();
 	}
-	if (IsValid(GameStateRef))
+	if (GameStateRef.IsValid())
 	{
 		GameStateRef->Multicast_CallSessionEnding();
 	}
@@ -263,11 +254,11 @@ void ACPP_GameMode::CallSessionEnding_Implementation()
 void ACPP_GameMode::CallLevelGeneration(const int32 InLevelNumber)
 {
 	bLevelWasGenerated = true;
-	if (!IsValid(GameStateRef))
+	if (!GameStateRef.IsValid())
 	{
 		GameStateRef = GetGameState<ACPP_GameState>();
 	}
-	if (IsValid(GameStateRef))
+	if (GameStateRef.IsValid())
 	{
 		GameStateRef->SetLevelNumber(InLevelNumber);
 	}
@@ -308,6 +299,7 @@ void ACPP_GameMode::CallLevelGeneration(const uint32 PlatformsLength,
 	{
 		PlatformSpawner = NewObject<UCPP_PlatformSpawner>();
 		PlatformSpawner->InitGameInstanceRef(GetGameInstance());
+		PlatformSpawner->InitGameModeRef(this);
 	}
 	UWorld* CurrentWorld = GetWorld();
 	if (PlatformSpawner)
@@ -333,11 +325,11 @@ void ACPP_GameMode::StartDestroyingLoadingScreen()
 	{
 		GetWorld()->GetTimerManager().ClearTimer(TH_CallLoadingScreenDestroying);
 	}
-	if (!IsValid(GameStateRef))
+	if (!GameStateRef.IsValid())
 	{
 		GameStateRef = GetGameState<ACPP_GameState>();
 	}
-	if (IsValid(GameStateRef))
+	if (GameStateRef.IsValid())
 	{
 		GameStateRef->CallLoadingScreenClosing();
 	}

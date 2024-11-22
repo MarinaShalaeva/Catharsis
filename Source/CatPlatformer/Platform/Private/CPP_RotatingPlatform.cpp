@@ -1,11 +1,12 @@
 ﻿// (c) M. A. Shalaeva, 2024
 
 #include "../Classes/CPP_RotatingPlatform.h"
+
 #include "Net/UnrealNetwork.h"
 
-ACPP_RotatingPlatform::ACPP_RotatingPlatform() : Super(),
-                                                 bBasicVariablesWereInitialized(false),
-                                                 Coordinate(FString(TEXT("X"))),
+ACPP_RotatingPlatform::ACPP_RotatingPlatform() : bBasicVariablesWereInitialized(false),
+                                                 bAxis(false),
+                                                 bUseAxisY(false),
                                                  Speed(25.0f),
                                                  Direction(-1)
 {
@@ -16,9 +17,11 @@ ACPP_RotatingPlatform::ACPP_RotatingPlatform() : Super(),
 	bAllowReceiveTickEventOnDedicatedServer = true;
 }
 
-void ACPP_RotatingPlatform::BeginPlay()
+void ACPP_RotatingPlatform::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
-	Super::BeginPlay();
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(ACPP_RotatingPlatform, bUseAxisY);
 }
 
 void ACPP_RotatingPlatform::Tick(float DeltaSeconds)
@@ -30,18 +33,9 @@ void ACPP_RotatingPlatform::Tick(float DeltaSeconds)
 	}
 }
 
-void ACPP_RotatingPlatform::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
-{
-	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-
-	DOREPLIFETIME(ACPP_RotatingPlatform, Coordinate);
-	DOREPLIFETIME(ACPP_RotatingPlatform, Speed);
-	DOREPLIFETIME(ACPP_RotatingPlatform, Direction);
-}
-
 void ACPP_RotatingPlatform::InitializeBasicVariables_Implementation(const FVector StartLocation)
 {
-	if (bBasicVariablesWereInitialized)
+	if (bBasicVariablesWereInitialized || !HasAuthority())
 		return;
 
 	Direction = FMath::RandBool() ? 1 : -1;
@@ -50,34 +44,39 @@ void ACPP_RotatingPlatform::InitializeBasicVariables_Implementation(const FVecto
 	{
 	case 1:
 		{
-			Coordinate = FString(TEXT("X"));
+			// X-axis rotation.
+			bAxis = true;
 			break;
 		}
 	case 2:
 		{
-			InitialPlatformRotation();
-			Coordinate = FString(TEXT("X"));
+			// Y-axis rotation.
+			bUseAxisY = true;
+			bAxis = true;
 			break;
 		}
 	case 3:
 		{
-			Coordinate = FString(TEXT("Z"));
+			// Z-axis rotation.
+			bAxis = false;
 			break;
 		}
 	default:
 		{
-			Coordinate = FString(TEXT("Z"));
+			bAxis = false;
 			break;
 		}
 	}
 
-	if (Coordinate == FString(TEXT("Z")))
+	if (bAxis)
 	{
-		Speed = FMath::FRandRange(24.0f, 26.0f);
+		// Z-axis rotation.
+		Speed = FMath::FRandRange(14.0f, 16.0f);
 	}
 	else
 	{
-		Speed = FMath::FRandRange(14.0f, 16.0f);
+		// X-axis or Y-axis rotation.
+		Speed = FMath::FRandRange(24.0f, 26.0f);
 	}
 
 	bBasicVariablesWereInitialized = true;
@@ -87,37 +86,24 @@ void ACPP_RotatingPlatform::ApplyPlatformProperty()
 {
 	Super::ApplyPlatformProperty();
 
-	/*GetWorld()->GetTimerManager().SetTimer(
-		TH_Rotation,
-		this,
-		&ACPP_RotatingPlatform::RotatePlatform,
-		0.017f,
-		true,
-		0.0f);*/
+	if (bUseAxisY)
+	{
+		InitialPlatformRotation();
+	}
 }
 
-void ACPP_RotatingPlatform::InitialPlatformRotation_Implementation()
-{
-	Multicast_InitialPlatformRotation();
-}
-
-void ACPP_RotatingPlatform::Multicast_InitialPlatformRotation_Implementation()
+void ACPP_RotatingPlatform::InitialPlatformRotation() const
 {
 	PlatformBase->AddLocalRotation(FRotator(0.0f, 90.0f, 0.0f));
 }
 
-void ACPP_RotatingPlatform::RotatePlatform_Implementation(const float& DeltaSeconds)
+void ACPP_RotatingPlatform::RotatePlatform_Implementation(const float DeltaSeconds)
 {
-	Multicast_RotatePlatform(DeltaSeconds);
-}
-
-void ACPP_RotatingPlatform::Multicast_RotatePlatform_Implementation(const float& DeltaSeconds)
-{
-	if (Coordinate.Equals(FString(TEXT("X"))))
+	if (bAxis)
 	{
 		AddActorLocalRotation(FRotator(0.0, 0.0, Speed * Direction * DeltaSeconds));
 	}
-	else if (Coordinate.Equals(FString(TEXT("Z"))))
+	else
 	{
 		AddActorLocalRotation(FRotator(0.0, Speed * Direction * DeltaSeconds, 0.0));
 	}

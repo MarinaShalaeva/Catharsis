@@ -84,17 +84,17 @@ void UWCPP_Settings::NativeConstruct()
 {
 	Super::NativeConstruct();
 
-	if (!IsValid(GameInstanceRef))
+	if (!GameInstanceRef.IsValid())
 	{
 		GameInstanceRef = GetGameInstance<UCPP_GameInstance>();
 	}
-	if (!IsValid(PlayerControllerRef))
+	if (!PlayerControllerRef.IsValid())
 	{
 		PlayerControllerRef = GetOwningPlayer<ACPP_PlayerController>();
 	}
-	if (IsValid(PlayerControllerRef))
+	if (PlayerControllerRef.IsValid())
 	{
-		if (IsValid(PlayerControllerRef) && IsValid(PlayerControllerRef->GetCharacterRef())
+		if (PlayerControllerRef.IsValid() && IsValid(PlayerControllerRef->GetCharacterRef())
 			&& IsValid(PlayerControllerRef->GetCharacterRef()->GetPlayerStateRef()))
 		{
 			PlayerStateRef = PlayerControllerRef->GetCharacterRef()->GetPlayerStateRef();
@@ -124,28 +124,31 @@ void UWCPP_Settings::NativeConstruct()
 			SoundManagerMainMenuRef = Cast<ACPP_SoundManagerMainMenu>(PlayerControllerRef->GetSoundManagerRef());
 			InitializeMainMenuTracksPanel();
 
-			if (UClass* SoundManagerClass = GameInstanceRef->GetActorClassBySoftReference(
-				UCPP_StaticWidgetLibrary::GetSoftReferenceToSoundManagerByRowName(
-					SoundManagersDataTable,
-					FName(TEXT("LevelSoundManager")))))
+			if (IsValid(SoundManagersDataTable.LoadSynchronous()))
 			{
-				ACPP_SoundManagerLevel* TmpSoundManager = GetWorld()->SpawnActorDeferred<ACPP_SoundManagerLevel>(
-					SoundManagerClass,
-					FTransform::Identity,
-					nullptr,
-					nullptr,
-					ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
-
-				if (IsValid(TmpSoundManager))
+				if (UClass* SoundManagerClass = GameInstanceRef->GetActorClassBySoftReference(
+					UCPP_StaticWidgetLibrary::GetSoftReferenceToSoundManagerByRowName(
+						SoundManagersDataTable.Get(),
+						FName(TEXT("LevelSoundManager")))))
 				{
-					TmpSoundManager->SetPlayerControllerRef(PlayerControllerRef);
-					TmpSoundManager->ApplySettingsFromTheSaveFile(
-						IsValid(PlayerStateRef)
-							? !PlayerStateRef->GetSaveFileWasCreated()
-							: true, true);
-					SoundManagerLevelRef = TmpSoundManager;
-					UGameplayStatics::FinishSpawningActor(TmpSoundManager, FTransform());
-					InitializeLevelTracksPanel();
+					ACPP_SoundManagerLevel* TmpSoundManager = GetWorld()->SpawnActorDeferred<ACPP_SoundManagerLevel>(
+						SoundManagerClass,
+						FTransform::Identity,
+						nullptr,
+						nullptr,
+						ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
+
+					if (IsValid(TmpSoundManager))
+					{
+						TmpSoundManager->SetPlayerControllerRef(PlayerControllerRef.Get());
+						TmpSoundManager->ApplySettingsFromTheSaveFile(
+							PlayerStateRef.IsValid()
+								? !PlayerStateRef->GetSaveFileWasCreated()
+								: true, true);
+						SoundManagerLevelRef = TmpSoundManager;
+						UGameplayStatics::FinishSpawningActor(TmpSoundManager, FTransform());
+						InitializeLevelTracksPanel();
+					}
 				}
 			}
 		}
@@ -154,28 +157,31 @@ void UWCPP_Settings::NativeConstruct()
 			SoundManagerLevelRef = Cast<ACPP_SoundManagerLevel>(PlayerControllerRef->GetSoundManagerRef());
 			InitializeLevelTracksPanel();
 
-			if (UClass* SoundManagerClass = GameInstanceRef->GetActorClassBySoftReference(
-				UCPP_StaticWidgetLibrary::GetSoftReferenceToSoundManagerByRowName(
-					SoundManagersDataTable,
-					FName(TEXT("MainMenuSoundManager")))))
+			if (IsValid(SoundManagersDataTable.LoadSynchronous()))
 			{
-				ACPP_SoundManagerMainMenu* TmpSoundManager = GetWorld()->SpawnActorDeferred<ACPP_SoundManagerMainMenu>(
-					SoundManagerClass,
-					FTransform::Identity,
-					nullptr,
-					nullptr,
-					ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
-
-				if (IsValid(TmpSoundManager))
+				if (UClass* SoundManagerClass = GameInstanceRef->GetActorClassBySoftReference(
+					UCPP_StaticWidgetLibrary::GetSoftReferenceToSoundManagerByRowName(
+						SoundManagersDataTable.Get(),
+						FName(TEXT("MainMenuSoundManager")))))
 				{
-					TmpSoundManager->SetPlayerControllerRef(PlayerControllerRef);
-					TmpSoundManager->ApplySettingsFromTheSaveFile(
-						IsValid(PlayerStateRef)
-							? !PlayerStateRef->GetSaveFileWasCreated()
-							: true, true);
-					SoundManagerMainMenuRef = TmpSoundManager;
-					UGameplayStatics::FinishSpawningActor(TmpSoundManager, FTransform());
-					InitializeMainMenuTracksPanel();
+					ACPP_SoundManagerMainMenu* TmpSoundManager = GetWorld()->SpawnActorDeferred<ACPP_SoundManagerMainMenu>(
+						SoundManagerClass,
+						FTransform::Identity,
+						nullptr,
+						nullptr,
+						ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
+
+					if (IsValid(TmpSoundManager))
+					{
+						TmpSoundManager->SetPlayerControllerRef(PlayerControllerRef.Get());
+						TmpSoundManager->ApplySettingsFromTheSaveFile(
+							PlayerStateRef.IsValid()
+								? !PlayerStateRef->GetSaveFileWasCreated()
+								: true, true);
+						SoundManagerMainMenuRef = TmpSoundManager;
+						UGameplayStatics::FinishSpawningActor(TmpSoundManager, FTransform());
+						InitializeMainMenuTracksPanel();
+					}
 				}
 			}
 		}
@@ -192,7 +198,7 @@ void UWCPP_Settings::NativeConstruct()
 
 	//====================Audio Panel==============================
 
-	if (IsValid(PlayerStateRef))
+	if (PlayerStateRef.IsValid())
 	{
 		SFX_Volume_Slider->SetValue(PlayerStateRef->Get_SFX_Volume());
 		Music_Volume_Slider->SetValue(PlayerStateRef->Get_Music_Volume());
@@ -276,7 +282,7 @@ void UWCPP_Settings::NativeDestruct()
 				SoundManagerMainMenuRef->StartPlayingUserPlaylist();
 			}
 
-			if (IsValid(PlayerStateRef))
+			if (PlayerStateRef.IsValid())
 			{
 				PlayerStateRef->Set_MM_ActiveTracksNumbers(SoundManagerMainMenuRef->
 					GetActivePlaylistTracksNumbers());
@@ -311,7 +317,7 @@ void UWCPP_Settings::NativeDestruct()
 				SoundManagerLevelRef->StartPlayingUserPlaylist();
 			}
 
-			if (IsValid(PlayerStateRef))
+			if (PlayerStateRef.IsValid())
 			{
 				PlayerStateRef->Set_MM_ActiveTracksNumbers(SoundManagerMainMenuRef->
 					GetActivePlaylistTracksNumbers());
@@ -499,7 +505,7 @@ void UWCPP_Settings::SFX_Volume_Slider_OnValueChanged(const float Value)
 {
 	if (bIsMainMenu && IsValid(SoundManagerMainMenuRef))
 	{
-		if (IsValid(PlayerStateRef))
+		if (PlayerStateRef.IsValid())
 		{
 			PlayerStateRef->Set_SFX_Volume(Value);
 		}
@@ -507,7 +513,7 @@ void UWCPP_Settings::SFX_Volume_Slider_OnValueChanged(const float Value)
 	}
 	else if (!bIsMainMenu && IsValid(SoundManagerLevelRef))
 	{
-		if (IsValid(PlayerStateRef))
+		if (PlayerStateRef.IsValid())
 		{
 			PlayerStateRef->Set_SFX_Volume(Value);
 		}
@@ -519,7 +525,7 @@ void UWCPP_Settings::Music_Volume_Slider_OnValueChanged(const float Value)
 {
 	if (bIsMainMenu && IsValid(SoundManagerMainMenuRef))
 	{
-		if (IsValid(PlayerStateRef))
+		if (PlayerStateRef.IsValid())
 		{
 			PlayerStateRef->Set_Music_Volume(Value);
 		}
@@ -527,7 +533,7 @@ void UWCPP_Settings::Music_Volume_Slider_OnValueChanged(const float Value)
 	}
 	else if (!bIsMainMenu && IsValid(SoundManagerLevelRef))
 	{
-		if (IsValid(PlayerStateRef))
+		if (PlayerStateRef.IsValid())
 		{
 			PlayerStateRef->Set_Music_Volume(Value);
 		}
@@ -993,9 +999,9 @@ void UWCPP_Settings::SetFocusForGamepadMode()
 	if (!bIsWidgetActive)
 		return;
 	
-	if (IsValid(PlayerControllerRef))
+	if (PlayerControllerRef.IsValid())
 	{
-		SFX_Volume_Slider->SetUserFocus(PlayerControllerRef);
+		SFX_Volume_Slider->SetUserFocus(PlayerControllerRef.Get());
 	}
 	else
 	{
@@ -1018,13 +1024,13 @@ void UWCPP_Settings::GamepadHorizontalScrollCalled(const bool bIsRightStickScrol
 	bool bSFXSliderActive = false;
 	bool bMusicSliderActive = false;
 
-	if (IsValid(PlayerControllerRef))
+	if (PlayerControllerRef.IsValid())
 	{
-		if (SFX_Volume_Slider->HasUserFocus(PlayerControllerRef))
+		if (SFX_Volume_Slider->HasUserFocus(PlayerControllerRef.Get()))
 		{
 			bSFXSliderActive = true;
 		}
-		else if (Music_Volume_Slider->HasUserFocus(PlayerControllerRef))
+		else if (Music_Volume_Slider->HasUserFocus(PlayerControllerRef.Get()))
 		{
 			bMusicSliderActive = true;
 		}

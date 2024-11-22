@@ -10,6 +10,7 @@
 #endif
 class ACPP_Platform;
 
+#include "Components/AudioComponent.h"
 #include "Components/TimelineComponent.h"
 class UTimelineComponent;
 class UBoxComponent;
@@ -41,6 +42,23 @@ protected:
 	 * deleted/removed from a level.
 	 */
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+
+	/**
+	 * Returns the properties used for network replication.
+	 * @param OutLifetimeProps Lifetime properties.
+	 */
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	UAudioComponent* IceAudioComponent;
+
+	/**
+	 * Function for initializing variables before this
+	 * actor appears in the game world.
+	 * Should be called before BeginPlay() (between
+	 * SpawnActorDeferred() and FinishSpawningActor()).
+	 */
+	virtual void InitializeBasicVariables_Implementation(const FVector StartLocation) override;
 
 	/**
 	 * Function for replying to the start of overlap with a
@@ -92,8 +110,9 @@ protected:
 	 * @param bTurnOn If true, sound should start playing.
 	 * If false, sound should stop playing.
 	 */
-	UFUNCTION(BlueprintImplementableEvent)
-	void SwitchSoundState(bool bTurnOn);
+	UFUNCTION(Client, Unreliable)
+	void SwitchSoundState(const bool bTurnOn);
+	void SwitchSoundState_Implementation(const bool bTurnOn);
 
 	/**
 	 * Collision box to check if the player has stepped on
@@ -147,6 +166,13 @@ protected:
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Circular Rotation | Variables")
 	float CircularRotationOffset;
+
+	/**
+	 * Type of the platform appearance. If true, basic
+	 * platform material should be changed to another one.
+	 */
+	UPROPERTY(Replicated, VisibleAnywhere, BlueprintReadOnly)
+	bool bPlatformAppearanceType;
 
 private:
 	/**

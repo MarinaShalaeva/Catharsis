@@ -76,7 +76,7 @@ protected:
 	 * sound manager child classes.
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Data Table")
-	UDataTable* SoundManagersDataTable;
+	TSoftObjectPtr<UDataTable> SoundManagersDataTable;
 
 	/**
 	 * Reference to the instance of the child ACPP_SoundManager
@@ -105,11 +105,10 @@ protected:
 	FDelegateHandle DH_L_TrackWasSwitched;
 
 	/**
-	 * Reference to the instance of ACPP_PlayerState
+	 * Weak pointer to the instance of ACPP_PlayerState
 	 * class associated with current Player Controller.
 	 */
-	UPROPERTY()
-	ACPP_PlayerState* PlayerStateRef;
+	TWeakObjectPtr<ACPP_PlayerState> PlayerStateRef;
 
 public:
 	/**

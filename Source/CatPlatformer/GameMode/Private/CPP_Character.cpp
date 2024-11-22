@@ -21,8 +21,8 @@ ACPP_Character::ACPP_Character() : bSprintNow(false), BaseSpeed(165.0f), SprintS
                                    BaseTurnRate(45.f), BaseLookUpRate(45.f), // Set turn rates for input.
                                    BaseJumpZVelocity(400.0f), HighJumpZVelocity(900.0f),
                                    AnimInstance(nullptr),
-                                   AttackSound(nullptr), AttackMontage(nullptr),
-                                   ReceiveDamageSound(nullptr), ReceiveDamageMontage(nullptr),
+                                   AttackMontage(nullptr),
+                                   ReceiveDamageMontage(nullptr),
                                    bIsOnGrass(false),
                                    bIsJumping(false),
                                    bIsAttacking(false),
@@ -84,8 +84,6 @@ void ACPP_Character::BeginPlay()
 		NiagaraComponent->ActivateSystem();
 		NiagaraComponent->DeactivateImmediate();
 	}
-
-	StartTransform = GetActorTransform();
 
 	AnimInstance = GetMesh()->GetAnimInstance();
 	if (!AttackMontageEndedDelegate.IsBound())
@@ -151,6 +149,7 @@ void ACPP_Character::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLi
 	DOREPLIFETIME(ACPP_Character, PlayerStateRef);
 	DOREPLIFETIME(ACPP_Character, bIsWaiting);
 	DOREPLIFETIME(ACPP_Character, CurrentColor);
+	DOREPLIFETIME(ACPP_Character, bSprintNow);
 }
 
 void ACPP_Character::OnAttackMontageEnded(UAnimMontage* AnimMontage, bool bInterrupted)
@@ -507,7 +506,12 @@ void ACPP_Character::LookUpAtRate(const float Rate)
 	AddControllerPitchInput(Rate * BaseLookUpRate * GetWorld()->GetDeltaSeconds());
 }
 
-void ACPP_Character::CustomStartJumping()
+void ACPP_Character::CustomStartJumping_Implementation()
+{
+	Multicast_CustomStartJumping();
+}
+
+void ACPP_Character::Multicast_CustomStartJumping_Implementation()
 {
 	if (IsValid(PlayerStateRef))
 	{
@@ -526,7 +530,12 @@ void ACPP_Character::CustomStartJumping()
 	}
 }
 
-void ACPP_Character::CustomStopJumping()
+void ACPP_Character::CustomStopJumping_Implementation()
+{
+	Multicast_CustomStopJumping();
+}
+
+void ACPP_Character::Multicast_CustomStopJumping_Implementation()
 {
 	StopJumping();
 }
@@ -567,13 +576,14 @@ void ACPP_Character::Server_Attack_Implementation()
 
 void ACPP_Character::Multicast_Attack_Implementation()
 {
-	if (AnimInstance && AttackMontage)
+	if (AnimInstance.IsValid() && IsValid(AttackMontage.LoadSynchronous()))
 	{
 		bIsAttacking = true;
-		if (!AnimInstance->Montage_IsActive(AttackMontage))
+		if (UAnimMontage* MontagePointer = AttackMontage.Get();
+			!AnimInstance->Montage_IsActive(MontagePointer))
 		{
-			AnimInstance->Montage_Play(AttackMontage);
-			AnimInstance->Montage_SetEndDelegate(AttackMontageEndedDelegate, AttackMontage);
+			AnimInstance->Montage_Play(MontagePointer);
+			AnimInstance->Montage_SetEndDelegate(AttackMontageEndedDelegate, MontagePointer);
 			GetWorld()->GetTimerManager().SetTimer(
 				TH_CallApplyingDamage,
 				this,
@@ -592,7 +602,7 @@ float ACPP_Character::TakeDamage(float DamageAmount, FDamageEvent const& DamageE
 
 	const float Result = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
 
-	if (AnimInstance && ReceiveDamageMontage)
+	if (AnimInstance.IsValid() && ReceiveDamageMontage)
 	{
 		if (!AnimInstance->Montage_IsActive(ReceiveDamageMontage))
 		{
@@ -604,9 +614,12 @@ float ACPP_Character::TakeDamage(float DamageAmount, FDamageEvent const& DamageE
 	}
 
 	ChangeEnablingOfPostProcessDamageMaterial(true);
-	if (ACPP_GameState* GameStateRef = Cast<ACPP_GameState>(UGameplayStatics::GetGameState(GetWorld())))
+	if (HasAuthority())
 	{
-		GameStateRef->AddUserScore(PlayerStateRef, -5);
+		if (ACPP_GameState* GameStateRef = Cast<ACPP_GameState>(UGameplayStatics::GetGameState(GetWorld())))
+		{
+			GameStateRef->AddUserScore(PlayerStateRef, -5);
+		}
 	}
 	if (GetWorld()->GetTimerManager().TimerExists(TH_TurnOff_PP_DamageMaterial))
 	{

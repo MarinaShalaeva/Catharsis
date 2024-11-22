@@ -55,15 +55,13 @@ protected:
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 	/**
-	 * Reference to the instance of ACPP_PlayerController
+	 * Weak pointer to the instance of ACPP_PlayerController
 	 * class.
 	 */
-	UPROPERTY()
-	ACPP_PlayerController* PlayerControllerRef;
+	TWeakObjectPtr<ACPP_PlayerController> PlayerControllerRef;
 
-	/** Reference to the instance of ACPP_PlayerState class. */
-	UPROPERTY()
-	ACPP_PlayerState* PlayerStateRef;
+	/** Weak pointer to the instance of ACPP_PlayerState class. */
+	TWeakObjectPtr<ACPP_PlayerState> PlayerStateRef;
 
 	/** USoundMix class object reference. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Override Classes", meta = (AllowPrivateAccess = true))

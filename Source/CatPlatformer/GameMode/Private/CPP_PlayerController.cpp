@@ -411,7 +411,7 @@ void ACPP_PlayerController::StartPause()
 	if (!bCanBePaused || IsPaused())
 		return;
 
-	if (IsValid(GameInstanceRef))
+	if (GameInstanceRef.IsValid())
 	{
 		if (GameInstanceRef->GetPlayingModeAsInt() == 0 || GameInstanceRef->GetPlayingModeAsInt() == 1)
 		{
@@ -429,7 +429,7 @@ void ACPP_PlayerController::StartPause()
 
 void ACPP_PlayerController::EndPause()
 {
-	if (IsValid(GameInstanceRef) &&
+	if (GameInstanceRef.IsValid() &&
 		(GameInstanceRef->GetPlayingModeAsInt() == 0 ||
 			GameInstanceRef->GetPlayingModeAsInt() == 1))
 	{
@@ -508,7 +508,7 @@ void ACPP_PlayerController::OnNetCleanup(UNetConnection* Connection)
 
 void ACPP_PlayerController::ClientDestroyOnlineSession_Implementation()
 {
-	if (IsValid(GameInstanceRef))
+	if (GameInstanceRef.IsValid())
 	{
 		GameInstanceRef->DestroySessionOnClientCustom();
 	}

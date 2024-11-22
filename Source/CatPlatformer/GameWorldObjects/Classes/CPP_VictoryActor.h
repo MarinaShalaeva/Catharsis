@@ -45,6 +45,12 @@ protected:
 	 */
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
+	/** 
+	 * Function that is called every frame.
+	 * Is needed for updating platform's location.
+	 */
+	virtual void Tick(float DeltaSeconds) override;
+
 	/**
 	 * Returns the properties used for network replication.
 	 * @param OutLifetimeProps Lifetime properties.
@@ -144,7 +150,7 @@ private:
 	 * Will be called by a looped timer.
 	 */
 	UFUNCTION()
-	void RotateActorAroundItsAxis();
+	void RotateActorAroundItsAxis(const float DeltaSeconds);
 
 	//=========Timeline for vertical actor's position==============
 public:
@@ -182,14 +188,14 @@ private:
 	 * The start actor's location for playing the animation
 	 * of the smooth movement up and down.
 	 */
-	UPROPERTY(Replicated)
+	UPROPERTY(/*Replicated*/)
 	FVector StartPosition;
 
 	/**
 	 * The end actor's location for playing the animation of
 	 * the smooth movement up and down.
 	 */
-	UPROPERTY(Replicated)
+	UPROPERTY(/*Replicated*/)
 	FVector EndPosition;
 
 protected:

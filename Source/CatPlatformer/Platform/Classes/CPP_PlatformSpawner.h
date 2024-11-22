@@ -23,6 +23,12 @@ class ACPP_Buff;
 #endif
 class ACPP_VictoryActor;
 
+#ifndef CPP_GAMEMODE_H
+#define CPP_GAMEMODE_H
+#include "CatPlatformer/GameMode/Classes/CPP_GameMode.h"
+#endif
+class ACPP_GameMode;
+
 #ifndef CPP_GAMEINSTANCE_H
 #define CPP_GAMEINSTANCE_H
 #include "CatPlatformer/GameMode/Classes/CPP_GameInstance.h"
@@ -44,15 +50,25 @@ class CATPLATFORMER_API UCPP_PlatformSpawner : public UObject
 	UCPP_PlatformSpawner();
 
 	/** Reference to the instance of UCPP_GameInstance class. */
-	UPROPERTY()
-	UCPP_GameInstance* GameInstanceRef;
+	TWeakObjectPtr<UCPP_GameInstance> GameInstanceRef;
+
+	/** Reference to the instance of ACPP_GameMode class. */
+	TWeakObjectPtr<ACPP_GameMode> GameModeRef;
 
 public:
 	/**
 	 * Function for initializing GameInstanceRef variable.
-	 * @param GI Game Instance reference.
+	 * @param GI Pointer to Game Instance.
 	 */
+	UFUNCTION()
 	void InitGameInstanceRef(UGameInstance* GI);
+	
+	/**
+	 * Function for initializing GameModeRef variable.
+	 * @param GM Pointer to Game Mode.
+	 */
+	UFUNCTION()
+	void InitGameModeRef(ACPP_GameMode* GM);
 
 	/**
 	 * Function for spawning platforms on the map.
@@ -78,28 +94,25 @@ public:
 	                    const TArray<TSoftClassPtr<ACPP_Platform>>& PlatformClasses,
 	                    const TSoftClassPtr<ACPP_Platform>& FinalPlatformClass,
 	                    const TSoftClassPtr<ACPP_VictoryActor>& VictoryActorClass,
-	                    const int32& Length,
-	                    const int32& Width,
-	                    const float& PlatformsZCoordinateOffset,
-	                    const float& SpawnDistance);
+	                    const int32 Length, const int32 Width,
+	                    const float PlatformsZCoordinateOffset,
+	                    const float SpawnDistance);
 
 	bool SpawnPlatforms_Validate(UWorld* WorldContext,
 	                             const TArray<TSoftClassPtr<ACPP_Platform>>& PlatformClasses,
 	                             const TSoftClassPtr<ACPP_Platform>& FinalPlatformClass,
 	                             const TSoftClassPtr<ACPP_VictoryActor>& VictoryActorClass,
-	                             const int32& Length,
-	                             const int32& Width,
-	                             const float& PlatformsZCoordinateOffset,
-	                             const float& SpawnDistance);
+	                             const int32 Length, const int32 Width,
+	                             const float PlatformsZCoordinateOffset,
+	                             const float SpawnDistance);
 
 	void SpawnPlatforms_Implementation(UWorld* WorldContext,
 	                                   const TArray<TSoftClassPtr<ACPP_Platform>>& PlatformClasses,
 	                                   const TSoftClassPtr<ACPP_Platform>& FinalPlatformClass,
 	                                   const TSoftClassPtr<ACPP_VictoryActor>& VictoryActorClass,
-	                                   const int32& Length,
-	                                   const int32& Width,
-	                                   const float& PlatformsZCoordinateOffset,
-	                                   const float& SpawnDistance);
+	                                   const int32 Length, const int32 Width,
+	                                   const float PlatformsZCoordinateOffset,
+	                                   const float SpawnDistance);
 
 	/**
 	 * Function for spawning buffs on the map.
@@ -124,24 +137,24 @@ public:
 	void SpawnBuffs(UWorld* WorldContext,
 	                const TArray<TSoftClassPtr<ACPP_Buff>>& BuffsClasses,
 	                const TArray<float>& BuffsSelectionProbabilities,
-	                const int32& TotalBuffsNumber,
-	                const int32& Length,
-	                const int32& Width,
-	                const float& PlatformsSpawnDistance);
+	                const int32 TotalBuffsNumber,
+	                const int32 Length,
+	                const int32 Width,
+	                const float PlatformsSpawnDistance);
 
 	bool SpawnBuffs_Validate(UWorld* WorldContext,
 	                         const TArray<TSoftClassPtr<ACPP_Buff>>& BuffsClasses,
 	                         const TArray<float>& BuffsSelectionProbabilities,
-	                         const int32& TotalBuffsNumber,
-	                         const int32& Length,
-	                         const int32& Width,
-	                         const float& PlatformsSpawnDistance);
+	                         const int32 TotalBuffsNumber,
+	                         const int32 Length,
+	                         const int32 Width,
+	                         const float PlatformsSpawnDistance);
 
 	void SpawnBuffs_Implementation(UWorld* WorldContext,
 	                               const TArray<TSoftClassPtr<ACPP_Buff>>& BuffsClasses,
 	                               const TArray<float>& BuffsSelectionProbabilities,
-	                               const int32& TotalBuffsNumber,
-	                               const int32& Length,
-	                               const int32& Width,
-	                               const float& PlatformsSpawnDistance);
+	                               const int32 TotalBuffsNumber,
+	                               const int32 Length,
+	                               const int32 Width,
+	                               const float PlatformsSpawnDistance);
 };

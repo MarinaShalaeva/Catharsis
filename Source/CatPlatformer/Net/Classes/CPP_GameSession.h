@@ -47,13 +47,11 @@ class CATPLATFORMER_API ACPP_GameSession : public AGameSession
 	 */
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
-	/** Pointer to the instance of UCPP_GameInstance class. */
-	UPROPERTY()
-	UCPP_GameInstance* GameInstanceRef;
+	/** Weak pointer to the instance of UCPP_GameInstance class. */
+	TWeakObjectPtr<UCPP_GameInstance> GameInstanceRef;
 
-	/** Pointer to the instance of ACPP_GameMode class. */
-	UPROPERTY()
-	ACPP_GameMode* GameModeRef;
+	/** Weak pointer to the instance of ACPP_GameMode class. */
+	TWeakObjectPtr<ACPP_GameMode> GameModeRef;
 
 	/** Structure for storing found game sessions. */
 	TSharedPtr<FOnlineSessionSearch> SearchSettings;

@@ -31,11 +31,11 @@ void UWCPP_Rules::NativeConstruct()
 {
 	Super::NativeConstruct();
 
-	if (!IsValid(PlayerControllerRef))
+	if (!PlayerControllerRef.IsValid())
 	{
 		PlayerControllerRef = Cast<ACPP_PlayerController>(GetOwningPlayer());
 	}
-	if (IsValid(PlayerControllerRef))
+	if (PlayerControllerRef.IsValid())
 	{
 		DH_GamepadScroll = PlayerControllerRef->GamepadScrollDelegate.AddUObject(this, &UWCPP_Rules::GamepadScroll);
 		DH_InputKeyWasPressed = PlayerControllerRef->InputKeyWasPressedDelegate.

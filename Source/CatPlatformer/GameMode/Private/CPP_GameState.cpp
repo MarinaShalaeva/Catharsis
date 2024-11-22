@@ -43,6 +43,9 @@ void ACPP_GameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLi
 
 void ACPP_GameState::SetLevelNumber_Implementation(const int32 NewValue)
 {
+	if (!HasAuthority())
+		return;
+
 	LevelNumber = NewValue;
 	switch (LevelNumber)
 	{
@@ -77,20 +80,18 @@ void ACPP_GameState::SetLevelNumber_Implementation(const int32 NewValue)
 void ACPP_GameState::AddPlayerState(APlayerState* PlayerState)
 {
 	Super::AddPlayerState(PlayerState);
-	Server_AddPlayerState(PlayerState);
-}
-
-void ACPP_GameState::Server_AddPlayerState_Implementation(APlayerState* PlayerState)
-{
 	Multicast_AddPlayerState(PlayerState);
 }
 
 void ACPP_GameState::Multicast_AddPlayerState_Implementation(APlayerState* PlayerState)
 {
-	if (ACPP_PlayerState* PS = Cast<ACPP_PlayerState>(PlayerState);
-		IsValid(PS) && !PS->PlayerIsReadyForGameDelegate.IsBoundToObject(this))
+	if (HasAuthority())
 	{
-		PS->PlayerIsReadyForGameDelegate.AddUObject(this, &ACPP_GameState::PlayerCanStartTheLevel);
+		if (ACPP_PlayerState* PS = Cast<ACPP_PlayerState>(PlayerState);
+			IsValid(PS) && !PS->PlayerIsReadyForGameDelegate.IsBoundToObject(this))
+		{
+			PS->PlayerIsReadyForGameDelegate.AddUObject(this, &ACPP_GameState::PlayerCanStartTheLevel);
+		}
 	}
 	PlayersNumberChangedDelegate.Broadcast(PlayerArray.Num());
 }
@@ -105,6 +106,11 @@ void ACPP_GameState::RemovePlayerState(APlayerState* PlayerState)
 
 	Super::RemovePlayerState(PlayerState);
 
+	Multicast_RemovePlayerState();
+}
+
+void ACPP_GameState::Multicast_RemovePlayerState_Implementation()
+{
 	PlayersNumberChangedDelegate.Broadcast(PlayerArray.Num());
 }
 
@@ -118,23 +124,13 @@ void ACPP_GameState::UpdateAllCharactersAppearance_Implementation()
 
 void ACPP_GameState::CallLoadingScreenClosing_Implementation()
 {
-	Multicast_CallLoadingScreenClosing();
-}
-
-void ACPP_GameState::Multicast_CallLoadingScreenClosing_Implementation()
-{
 	for (const auto& PS : PlayerArray)
 	{
-		Cast<ACPP_PlayerState>(PS)->DestroyLoadingScreenDelegate.Broadcast(true);
+		Cast<ACPP_PlayerState>(PS)->TriggerDestroyLoadingScreenDelegate(true);
 	}
 }
 
 void ACPP_GameState::PlayerCanStartTheLevel_Implementation(ACPP_PlayerState* PlayerState)
-{
-	Multicast_PlayerCanStartTheLevel(PlayerState);
-}
-
-void ACPP_GameState::Multicast_PlayerCanStartTheLevel_Implementation(ACPP_PlayerState* PlayerState)
 {
 	for (const auto& PS : PlayerArray)
 	{
@@ -146,14 +142,9 @@ void ACPP_GameState::Multicast_PlayerCanStartTheLevel_Implementation(ACPP_Player
 
 void ACPP_GameState::NotifyThatLevelCanBeStarted_Implementation()
 {
-	Multicast_NotifyThatLevelCanBeStarted();
-}
-
-void ACPP_GameState::Multicast_NotifyThatLevelCanBeStarted_Implementation()
-{
 	for (const auto& PS : PlayerArray)
 	{
-		Cast<ACPP_PlayerState>(PS)->ShouldBeginCountdownToStartLevelDelegate.Broadcast();
+		Cast<ACPP_PlayerState>(PS)->TriggerShouldBeginCountdownDelegate();
 	}
 }
 
@@ -161,45 +152,12 @@ void ACPP_GameState::AddUserScore_Implementation(ACPP_PlayerState* PlayerState, 
 {
 	if (IsValid(PlayerState))
 	{
-		TArray<APawn*> Players{};
-		TArray<FTransform> PlayersTransforms{};
-		if (ScoreToAdd == -5)
-		{
-			for (const auto& PS : PlayerArray)
-			{
-				Players.Emplace(PS->GetPawn());
-				PlayersTransforms.Emplace(PS->GetPawn()->GetActorTransform());
-			}
-		}
-		Multicast_AddUserScore(PlayerState, ScoreToAdd, Players, PlayersTransforms);
-	}
-}
-
-void ACPP_GameState::Multicast_AddUserScore_Implementation(ACPP_PlayerState* PlayerState, const int32 ScoreToAdd,
-                                                           const TArray<APawn*>& Players,
-                                                           const TArray<FTransform>& PlayersTransforms)
-{
-	PlayerState->AddNewPointsToUserScore(ScoreToAdd);
-	if (ScoreToAdd == -5)
-	{
-		for (int32 i = 0; i < Players.Num(); i++)
-		{
-			Players[i]->SetActorLocation(PlayersTransforms[i].GetLocation());
-			Players[i]->SetActorRotation(PlayersTransforms[i].GetRotation());
-		}
-	}
-	if (PlayerState->ScoreChangedDelegate.IsBound())
-	{
-		PlayerState->ScoreChangedDelegate.Execute(ScoreToAdd);
+		PlayerState->AddNewPointsToUserScore(ScoreToAdd);
+		PlayerState->TriggerScoreChangedDelegate(ScoreToAdd);
 	}
 }
 
 void ACPP_GameState::LevelWasEnded_Implementation()
-{
-	Multicast_LevelWasEnded();
-}
-
-void ACPP_GameState::Multicast_LevelWasEnded_Implementation()
 {
 	TArray<ACPP_PlayerState*> OutWinners;
 	GetTheWinner(OutWinners);
@@ -223,7 +181,7 @@ void ACPP_GameState::Multicast_LevelWasEnded_Implementation()
 					break;
 				}
 			}
-			if (UCPP_GameInstance* GI = GetGameInstance<UCPP_GameInstance>())
+			if (const UCPP_GameInstance* GI = GetGameInstance<UCPP_GameInstance>())
 			{
 				if (GI->GetPlayingModeAsInt() == 2 ||
 					GI->GetPlayingModeAsInt() == 3 ||
@@ -246,10 +204,7 @@ void ACPP_GameState::Multicast_LevelWasEnded_Implementation()
 			}
 			PlayerState->IncrementNumberOfEndedLevels();
 			PlayerState->AddCurrentScoreToGeneralScore();
-			if (PlayerState->LevelWasEndedDelegate.IsBound())
-			{
-				PlayerState->LevelWasEndedDelegate.Broadcast(bIsWinner);
-			}
+			PlayerState->TriggerLevelWasEndedDelegate(bIsWinner);
 			PlayerState->SaveDataToFile();
 		}
 		else
@@ -260,7 +215,6 @@ void ACPP_GameState::Multicast_LevelWasEnded_Implementation()
 		}
 	}
 }
-
 
 void ACPP_GameState::GetTheWinner(TArray<ACPP_PlayerState*>& OutWinners)
 {
@@ -346,12 +300,31 @@ void ACPP_GameState::Multicast_CallSessionEnding_Implementation()
 
 void ACPP_GameState::SpawnVictoryFireworks_Implementation(const TArray<ACPP_PlayerState*>& InWinners)
 {
+	TArray<bool> SoundsToPlay{};
+	SoundsToPlay.Reserve(5);
+	for (int8 i = 0; i < 5; i++)
+	{
+		SoundsToPlay.Add(FMath::RandBool());
+	}
+
+	TArray<FVector> FireworkLocations{};
+
 	for (const auto Winner : InWinners)
 	{
 		const APawn* Pawn = Winner->GetPawn();
 		FVector FireworkLocation = Pawn->GetActorLocation();
 		FireworkLocation.Z += 90.f;
 
+		FireworkLocations.Emplace(FireworkLocation);
+	}
+	Multicast_SpawnVictoryFireworks(SoundsToPlay, FireworkLocations);
+}
+
+void ACPP_GameState::Multicast_SpawnVictoryFireworks_Implementation(const TArray<bool>& SoundsToPlay,
+                                                                    const TArray<FVector>& FireworkLocations)
+{
+	for (auto It = FireworkLocations.CreateConstIterator(); It; ++It)
+	{
 		ACPP_VictoryFirework* Firework = GetWorld()->SpawnActorDeferred<ACPP_VictoryFirework>(
 			VictoryFireworkClass,
 			FTransform::Identity,
@@ -359,8 +332,11 @@ void ACPP_GameState::SpawnVictoryFireworks_Implementation(const TArray<ACPP_Play
 			nullptr,
 			ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
 
+		Firework->SoundsToPlay = SoundsToPlay;
+		Firework->SpawnLocation = *It;
+
 		UGameplayStatics::FinishSpawningActor(Firework, FTransform(FRotator(),
-		                                                           FireworkLocation,
+		                                                           *It,
 		                                                           FVector(1.0f)));
 	}
 }

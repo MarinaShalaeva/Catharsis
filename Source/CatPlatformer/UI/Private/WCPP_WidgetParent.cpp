@@ -15,7 +15,7 @@ void UWCPP_WidgetParent::NativeConstruct()
 {
 	Super::NativeConstruct();
 
-	if (IsValid(PlayerControllerRef))
+	if (PlayerControllerRef.IsValid())
 	{
 		DH_AllGamepadsWereDisconnected = PlayerControllerRef->AllGamepadsWereDisconnectedDelegate.AddUObject(
 			this,
@@ -25,7 +25,7 @@ void UWCPP_WidgetParent::NativeConstruct()
 
 void UWCPP_WidgetParent::NativeDestruct()
 {
-	if (IsValid(PlayerControllerRef) && PlayerControllerRef->AllGamepadsWereDisconnectedDelegate.IsBound())
+	if (PlayerControllerRef.IsValid() && PlayerControllerRef->AllGamepadsWereDisconnectedDelegate.IsBound())
 	{
 		PlayerControllerRef->AllGamepadsWereDisconnectedDelegate.Remove(DH_AllGamepadsWereDisconnected);
 		DH_AllGamepadsWereDisconnected.Reset();

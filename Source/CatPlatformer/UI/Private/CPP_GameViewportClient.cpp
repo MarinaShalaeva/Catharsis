@@ -12,7 +12,7 @@ void UCPP_GameViewportClient::Init(FWorldContext& WorldContext,
 	if (IsValid(OwningGameInstance))
 	{
 		GameInstanceRef = Cast<UCPP_GameInstance>(OwningGameInstance);
-		if (IsValid(GameInstanceRef))
+		if (GameInstanceRef.IsValid())
 		{
 			DH_ChangeActiveSplitscreenType = GameInstanceRef->ChangeActiveSplitscreenTypeDelegate.AddUObject(
 				this, &UCPP_GameViewportClient::SetActiveSplitscreenType);
@@ -22,7 +22,7 @@ void UCPP_GameViewportClient::Init(FWorldContext& WorldContext,
 
 void UCPP_GameViewportClient::BeginDestroy()
 {
-	if (IsValid(GameInstanceRef))
+	if (GameInstanceRef.IsValid())
 	{
 		GameInstanceRef->ChangeActiveSplitscreenTypeDelegate.Remove(DH_ChangeActiveSplitscreenType);
 		DH_ChangeActiveSplitscreenType.Reset();

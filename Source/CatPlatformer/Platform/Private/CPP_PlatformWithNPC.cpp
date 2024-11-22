@@ -22,10 +22,8 @@ ACPP_PlatformWithNPC::ACPP_PlatformWithNPC()
 	CollisionBox->SetupAttachment(RootComponent);
 	CollisionBox->InitBoxExtent(FVector(150.0f, 150.0f, 3.0f));
 	CollisionBox->SetRelativeLocation(FVector(0.0f, 0.0f, 12.0f));
-	//NavMeshCollisionBox->bDynamicObstacle = true;
 
 	PlatformBase = CreateDefaultSubobject<UStaticMeshComponent>(FName(TEXT("SM Platform Base")));
-	//PlatformBase->SetupAttachment(NavMeshCollisionBox);
 	PlatformBase->SetRelativeLocation(FVector(0.0f, 0.0f, -12.0f));
 	PlatformBase->SetupAttachment(RootComponent);
 }
@@ -34,11 +32,11 @@ void ACPP_PlatformWithNPC::BeginPlay()
 {
 	Super::BeginPlay();
 
-	CollisionBox->OnComponentBeginOverlap.AddDynamic(this, &ACPP_PlatformWithNPC::CollisionBoxOverlapBegin);
-	CollisionBox->OnComponentEndOverlap.AddDynamic(this, &ACPP_PlatformWithNPC::CollisionBoxOverlapEnd);
-
 	if (HasAuthority())
 	{
+		CollisionBox->OnComponentBeginOverlap.AddDynamic(this, &ACPP_PlatformWithNPC::CollisionBoxOverlapBegin);
+		CollisionBox->OnComponentEndOverlap.AddDynamic(this, &ACPP_PlatformWithNPC::CollisionBoxOverlapEnd);
+
 		GetWorld()->GetTimerManager().SetTimer(
 			TH_SpawnCrow,
 			this,
@@ -46,20 +44,20 @@ void ACPP_PlatformWithNPC::BeginPlay()
 			1.5f,
 			false);
 	}
-	/*GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Cyan,
-									 FString::Printf(TEXT("ACPP_PlatformWithNPC::BeginPlay()")));*/
 }
 
 void ACPP_PlatformWithNPC::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-	CollisionBox->OnComponentBeginOverlap.RemoveDynamic(this, &ACPP_PlatformWithNPC::CollisionBoxOverlapBegin);
-	CollisionBox->OnComponentEndOverlap.RemoveDynamic(this, &ACPP_PlatformWithNPC::CollisionBoxOverlapEnd);
-
-	if (GetWorld()->GetTimerManager().TimerExists(TH_SpawnCrow))
+	if (HasAuthority())
 	{
-		GetWorld()->GetTimerManager().ClearTimer(TH_SpawnCrow);
+		CollisionBox->OnComponentBeginOverlap.RemoveDynamic(this, &ACPP_PlatformWithNPC::CollisionBoxOverlapBegin);
+		CollisionBox->OnComponentEndOverlap.RemoveDynamic(this, &ACPP_PlatformWithNPC::CollisionBoxOverlapEnd);
+
+		if (GetWorld()->GetTimerManager().TimerExists(TH_SpawnCrow))
+		{
+			GetWorld()->GetTimerManager().ClearTimer(TH_SpawnCrow);
+		}
 	}
-	
 	Super::EndPlay(EndPlayReason);
 }
 
@@ -96,8 +94,6 @@ void ACPP_PlatformWithNPC::CollisionBoxOverlapEnd(UPrimitiveComponent* Overlappe
 
 void ACPP_PlatformWithNPC::SpawnCrow()
 {
-	/*GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Cyan,
-									 FString::Printf(TEXT("ACPP_PlatformWithNPC::BeginPlay(), Has Authority")));*/
 	if (GetWorld()->GetTimerManager().TimerExists(TH_SpawnCrow))
 	{
 		GetWorld()->GetTimerManager().ClearTimer(TH_SpawnCrow);
@@ -116,10 +112,5 @@ void ACPP_PlatformWithNPC::SpawnCrow()
 		EnemyRef->StartTransform = Transform;
 
 		UGameplayStatics::FinishSpawningActor(EnemyRef, Transform);
-
-		/*GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Cyan,
-		                                 FString::Printf(
-			                                 TEXT("ACPP_PlatformWithNPC::BeginPlay(), EnemyRef spawned. Name = %s"),
-			                                 *EnemyRef->GetName()));*/
 	}
 }

@@ -9,6 +9,7 @@
 #include "CatPlatformer/UI/Classes/WCPP_WidgetParent.h"
 #endif
 class UWCPP_WidgetParent;
+class UButton;
 class UScrollBox;
 class UTextBlock;
 

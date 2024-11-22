@@ -30,7 +30,7 @@ void ACPP_PlayerState::BeginPlay()
 
 	ShouldBeginCountdownToStartLevelDelegate.AddUObject(this, &ACPP_PlayerState::CountdownStarted);
 
-	if (!IsValid(GameInstanceRef))
+	if (!GameInstanceRef.IsValid())
 	{
 		GameInstanceRef = Cast<UCPP_GameInstance>(GetGameInstance());
 		if (bIsFirstPlayer)
@@ -79,28 +79,34 @@ void ACPP_PlayerState::EndPlay(const EEndPlayReason::Type EndPlayReason)
 
 	if (ScoreChangedDelegate.IsBound())
 	{
-		ScoreChangedDelegate.Unbind();
+		ScoreChangedDelegate.Clear();
 	}
-	ShouldBeginCountdownToStartLevelDelegate.Clear();
-	PlayerIsReadyForGameDelegate.Clear();
-
+	if (ShouldBeginCountdownToStartLevelDelegate.IsBound())
+	{
+		ShouldBeginCountdownToStartLevelDelegate.Clear();
+	}
+	if (PlayerIsReadyForGameDelegate.IsBound())
+	{
+		PlayerIsReadyForGameDelegate.Clear();
+	}
 	Super::EndPlay(EndPlayReason);
 }
 
 void ACPP_PlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-	DOREPLIFETIME(ACPP_PlayerState, bIsReadyToStart);
+	DOREPLIFETIME_CONDITION(ACPP_PlayerState, bIsReadyToStart, COND_OwnerOnly);
 	DOREPLIFETIME(ACPP_PlayerState, UserScore);
+	DOREPLIFETIME_CONDITION(ACPP_PlayerState, PlayerData, COND_OwnerOnly);
 }
 
 bool ACPP_PlayerState::LoadInfoFromSaveFile()
 {
-	if (!IsValid(GameInstanceRef))
+	if (!GameInstanceRef.IsValid())
 	{
 		GameInstanceRef = Cast<UCPP_GameInstance>(GetGameInstance());
 	}
-	if (IsValid(GameInstanceRef))
+	if (GameInstanceRef.IsValid())
 	{
 		if (!bIsFirstPlayer)
 			return false;
@@ -115,12 +121,12 @@ bool ACPP_PlayerState::LoadInfoFromSaveFile()
 	return false;
 }
 
-void ACPP_PlayerState::SaveDataToFile()
+void ACPP_PlayerState::SaveDataToFile_Implementation()
 {
 	if (!bIsFirstPlayer)
 		return;
 
-	if (IsValid(GameInstanceRef))
+	if (GameInstanceRef.IsValid())
 	{
 		bSaveFileWasCreated = true;
 		CollectAudioInfoForSavingItToFile();
@@ -133,7 +139,7 @@ void ACPP_PlayerState::CollectAudioInfoForSavingItToFile()
 	if (!bIsFirstPlayer)
 		return;
 
-	if (IsValid(GameInstanceRef))
+	if (GameInstanceRef.IsValid())
 	{
 		bSaveFileWasCreated = true;
 		GameInstanceRef->GetSaveManager()->SetNewAudioDataToSaveGameObject(
@@ -227,7 +233,7 @@ void ACPP_PlayerState::IncrementDeathsNumber()
 
 void ACPP_PlayerState::IncrementOnlineLevelsWinsNumber()
 {
-	if (IsValid(GameInstanceRef) && (GameInstanceRef->GetPlayingModeAsInt() == 2 ||
+	if (GameInstanceRef.IsValid() && (GameInstanceRef->GetPlayingModeAsInt() == 2 ||
 		GameInstanceRef->GetPlayingModeAsInt() == 3 ||
 		GameInstanceRef->GetPlayingModeAsInt() == 4))
 	{
@@ -237,11 +243,27 @@ void ACPP_PlayerState::IncrementOnlineLevelsWinsNumber()
 
 void ACPP_PlayerState::IncrementOnlineLossesNumber()
 {
-	if (IsValid(GameInstanceRef) && (GameInstanceRef->GetPlayingModeAsInt() == 2 ||
+	if (GameInstanceRef.IsValid() && (GameInstanceRef->GetPlayingModeAsInt() == 2 ||
 		GameInstanceRef->GetPlayingModeAsInt() == 3 ||
 		GameInstanceRef->GetPlayingModeAsInt() == 4))
 	{
 		PlayerData.OnlineLossesNumber++;
+	}
+}
+
+void ACPP_PlayerState::TriggerDestroyLoadingScreenDelegate_Implementation(const bool bShouldHideBackgroundImage)
+{
+	if (DestroyLoadingScreenDelegate.IsBound())
+	{
+		DestroyLoadingScreenDelegate.Broadcast(bShouldHideBackgroundImage);
+	}
+}
+
+void ACPP_PlayerState::TriggerShouldBeginCountdownDelegate_Implementation()
+{
+	if (ShouldBeginCountdownToStartLevelDelegate.IsBound())
+	{
+		ShouldBeginCountdownToStartLevelDelegate.Broadcast();
 	}
 }
 
@@ -347,7 +369,7 @@ void ACPP_PlayerState::TryToUpdateBestResult(const uint8 LevelNumber, const floa
 	}
 }
 
-void ACPP_PlayerState::SetUserScore(const int32 NewValue)
+void ACPP_PlayerState::SetUserScore_Implementation(const int32 NewValue)
 {
 	if (NewValue < 0)
 	{
@@ -359,7 +381,15 @@ void ACPP_PlayerState::SetUserScore(const int32 NewValue)
 	}
 }
 
-void ACPP_PlayerState::AddNewPointsToUserScore(const int32 PointsToAdd)
+void ACPP_PlayerState::TriggerScoreChangedDelegate_Implementation(const int32 PointsToAdd)
+{
+	if (ScoreChangedDelegate.IsBound())
+	{
+		ScoreChangedDelegate.Broadcast(PointsToAdd);
+	}
+}
+
+void ACPP_PlayerState::AddNewPointsToUserScore_Implementation(const int32 PointsToAdd)
 {
 	SetUserScore(UserScore + PointsToAdd);
 }
@@ -367,6 +397,14 @@ void ACPP_PlayerState::AddNewPointsToUserScore(const int32 PointsToAdd)
 void ACPP_PlayerState::AddCurrentScoreToGeneralScore()
 {
 	PlayerData.GeneralScore += UserScore;
+}
+
+void ACPP_PlayerState::TriggerLevelWasEndedDelegate_Implementation(const bool bIsWinner)
+{
+	if (LevelWasEndedDelegate.IsBound())
+	{
+		LevelWasEndedDelegate.Broadcast(bIsWinner);
+	}
 }
 
 void ACPP_PlayerState::Set_SFX_Volume(const float NewValue)

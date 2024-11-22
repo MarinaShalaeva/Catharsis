@@ -70,17 +70,17 @@ void UWCPP_MainMenu::NativeConstruct()
 	ExitButton->OnClicked.AddDynamic(this, &UWCPP_MainMenu::ExitButtonOnClick);
 	GoBackButton->OnClicked.AddDynamic(this, &UWCPP_MainMenu::GoBackButtonOnClick);
 
-	if (!IsValid(GameInstanceRef))
+	if (!GameInstanceRef.IsValid())
 	{
 		GameInstanceRef = Cast<UCPP_GameInstance>(GetGameInstance());
 	}
-	if (IsValid(GameInstanceRef))
+	if (GameInstanceRef.IsValid())
 	{
 		GetWorld()->GetTimerManager().SetTimer(
 			TH_CloseLastOpenedSession,
 			[&]()
 			{
-				if (IsValid(GameInstanceRef) && GameInstanceRef->CloseLastOpenedSessionDelegate.IsBound())
+				if (GameInstanceRef.IsValid() && GameInstanceRef->CloseLastOpenedSessionDelegate.IsBound())
 				{
 					GameInstanceRef->CloseLastOpenedSessionDelegate.Execute();
 				}
@@ -102,11 +102,11 @@ void UWCPP_MainMenu::NativeConstruct()
 		}
 	}
 
-	if (!IsValid(PlayerControllerRef))
+	if (!PlayerControllerRef.IsValid())
 	{
 		PlayerControllerRef = Cast<ACPP_PlayerController>(GetOwningPlayer());
 	}
-	if (IsValid(PlayerControllerRef))
+	if (PlayerControllerRef.IsValid())
 	{
 		bIsGamepadMode = PlayerControllerRef->GetIsGamepadMode();
 		if (bIsGamepadMode)
@@ -148,13 +148,13 @@ void UWCPP_MainMenu::NativeDestruct()
 	DestroyStatisticsWidget();
 	DestroyInfoWidget();
 
-	if (IsValid(PlayerControllerRef))
+	if (PlayerControllerRef.IsValid())
 	{
 		PlayerControllerRef->InputKeyWasPressedDelegate.Remove(DH_InputKeyWasPressed);
 		DH_InputKeyWasPressed.Reset();
 		PlayerControllerRef = nullptr;
 	}
-	if (IsValid(GameInstanceRef))
+	if (GameInstanceRef.IsValid())
 	{
 		GameInstanceRef->LoginEndedDelegate.Unbind();
 		GameInstanceRef = nullptr;
@@ -165,7 +165,7 @@ void UWCPP_MainMenu::NativeDestruct()
 
 void UWCPP_MainMenu::LoginToEOS_Button_OnClick()
 {
-	if (IsValid(GameInstanceRef) && GameInstanceRef->StartLoginDelegate.IsBound())
+	if (GameInstanceRef.IsValid() && GameInstanceRef->StartLoginDelegate.IsBound())
 	{
 		GameInstanceRef->StartLoginDelegate.Execute();
 	}
@@ -187,7 +187,7 @@ void UWCPP_MainMenu::SwitchToConfigureLevelParamsPanel()
 {
 	if (IsValid(ConfigureLevelParamsSizeBox))
 	{
-		if (IsValid(ConfigureLevelParams_Widget))
+		if (ConfigureLevelParams_Widget.IsValid())
 		{
 			if (bIsGamepadMode)
 			{
@@ -214,22 +214,26 @@ void UWCPP_MainMenu::SwitchToConfigureLevelParamsPanel()
 void UWCPP_MainMenu::InitConfigureLevelParamsWidget()
 {
 	if (ConfigureLevelParams_Widget == nullptr &&
-		IsValid(PlayerControllerRef) &&
-		IsValid(GameInstanceRef))
+		PlayerControllerRef.IsValid() &&
+		GameInstanceRef.IsValid())
 	{
 		const FName Row = FName(TEXT("LevelParams"));
-		if (UClass* Class = GameInstanceRef->GetWidgetClassBySoftReference(
-			UCPP_StaticWidgetLibrary::GetSoftReferenceToWidgetBlueprintByRowName(
-				WidgetBlueprintsDataTable,
-				Row)))
+		if (IsValid(WidgetBlueprintsDataTable.LoadSynchronous()))
 		{
-			ConfigureLevelParams_Widget = CreateWidget<UWCPP_WidgetParent>(PlayerControllerRef, Class);
-			if (IsValid(ConfigureLevelParams_Widget))
+			if (UClass* Class = GameInstanceRef->GetWidgetClassBySoftReference(
+				UCPP_StaticWidgetLibrary::GetSoftReferenceToWidgetBlueprintByRowName(
+					WidgetBlueprintsDataTable.Get(),
+					Row)))
 			{
-				ConfigureLevelParams_Widget->SetFlags(RF_StrongRefOnFrame);
-				ConfigureLevelParams_Widget->SetGameInstanceRef(GameInstanceRef);
-				ConfigureLevelParams_Widget->SetPlayerControllerRef(PlayerControllerRef);
-				ConfigureLevelParamsSizeBox->AddChild(ConfigureLevelParams_Widget);
+				ConfigureLevelParams_Widget = CreateWidget<UWCPP_WidgetParent>(PlayerControllerRef.Get(),
+				                                                               Class);
+				if (ConfigureLevelParams_Widget.IsValid())
+				{
+					ConfigureLevelParams_Widget->SetFlags(RF_StrongRefOnFrame);
+					ConfigureLevelParams_Widget->SetGameInstanceRef(GameInstanceRef.Get());
+					ConfigureLevelParams_Widget->SetPlayerControllerRef(PlayerControllerRef.Get());
+					ConfigureLevelParamsSizeBox->AddChild(ConfigureLevelParams_Widget.Get());
+				}
 			}
 		}
 	}
@@ -237,7 +241,7 @@ void UWCPP_MainMenu::InitConfigureLevelParamsWidget()
 
 void UWCPP_MainMenu::DestroyConfigureLevelParamsWidget()
 {
-	if (IsValid(ConfigureLevelParams_Widget))
+	if (ConfigureLevelParams_Widget.IsValid())
 	{
 		ConfigureLevelParams_Widget->RemoveFromParent();
 		ConfigureLevelParams_Widget = nullptr;
@@ -265,22 +269,25 @@ void UWCPP_MainMenu::SwitchToRulesPanel()
 void UWCPP_MainMenu::InitRulesWidget()
 {
 	if (Rules_Widget == nullptr &&
-		IsValid(PlayerControllerRef) &&
-		IsValid(GameInstanceRef))
+		PlayerControllerRef.IsValid() &&
+		GameInstanceRef.IsValid())
 	{
 		const FName Row = FName(TEXT("Rules"));
-		if (UClass* Class = GameInstanceRef->GetWidgetClassBySoftReference(
-			UCPP_StaticWidgetLibrary::GetSoftReferenceToWidgetBlueprintByRowName(
-				WidgetBlueprintsDataTable,
-				Row)))
+		if (IsValid(WidgetBlueprintsDataTable.LoadSynchronous()))
 		{
-			Rules_Widget = CreateWidget<UWCPP_WidgetParent>(PlayerControllerRef, Class);
-			if (IsValid(Rules_Widget))
+			if (UClass* Class = GameInstanceRef->GetWidgetClassBySoftReference(
+				UCPP_StaticWidgetLibrary::GetSoftReferenceToWidgetBlueprintByRowName(
+					WidgetBlueprintsDataTable.Get(),
+					Row)))
 			{
-				Rules_Widget->SetFlags(RF_StrongRefOnFrame);
-				Rules_Widget->SetGameInstanceRef(GameInstanceRef);
-				Rules_Widget->SetPlayerControllerRef(PlayerControllerRef);
-				RulesSizeBox->AddChild(Rules_Widget);
+				Rules_Widget = CreateWidget<UWCPP_WidgetParent>(PlayerControllerRef.Get(), Class);
+				if (Rules_Widget.IsValid())
+				{
+					Rules_Widget->SetFlags(RF_StrongRefOnFrame);
+					Rules_Widget->SetGameInstanceRef(GameInstanceRef.Get());
+					Rules_Widget->SetPlayerControllerRef(PlayerControllerRef.Get());
+					RulesSizeBox->AddChild(Rules_Widget.Get());
+				}
 			}
 		}
 	}
@@ -288,7 +295,7 @@ void UWCPP_MainMenu::InitRulesWidget()
 
 void UWCPP_MainMenu::DestroyRulesWidget()
 {
-	if (IsValid(Rules_Widget))
+	if (Rules_Widget.IsValid())
 	{
 		Rules_Widget->RemoveFromParent();
 		Rules_Widget = nullptr;
@@ -316,22 +323,25 @@ void UWCPP_MainMenu::SwitchToCharacterAppearancePanel()
 void UWCPP_MainMenu::InitCharacterAppearanceWidget()
 {
 	if (CharacterAppearance_Widget == nullptr &&
-		IsValid(PlayerControllerRef) &&
-		IsValid(GameInstanceRef))
+		PlayerControllerRef.IsValid() &&
+		GameInstanceRef.IsValid())
 	{
 		const FName Row = FName(TEXT("CharacterAppearance"));
-		if (UClass* Class = GameInstanceRef->GetWidgetClassBySoftReference(
-			UCPP_StaticWidgetLibrary::GetSoftReferenceToWidgetBlueprintByRowName(
-				WidgetBlueprintsDataTable,
-				Row)))
+		if (IsValid(WidgetBlueprintsDataTable.LoadSynchronous()))
 		{
-			CharacterAppearance_Widget = CreateWidget<UWCPP_WidgetParent>(PlayerControllerRef, Class);
-			if (IsValid(CharacterAppearance_Widget))
+			if (UClass* Class = GameInstanceRef->GetWidgetClassBySoftReference(
+				UCPP_StaticWidgetLibrary::GetSoftReferenceToWidgetBlueprintByRowName(
+					WidgetBlueprintsDataTable.Get(),
+					Row)))
 			{
-				CharacterAppearance_Widget->SetFlags(RF_StrongRefOnFrame);
-				CharacterAppearance_Widget->SetPlayerControllerRef(PlayerControllerRef);
-				CharacterAppearance_Widget->SetGameInstanceRef(GameInstanceRef);
-				CharacterAppearanceSizeBox->AddChild(CharacterAppearance_Widget);
+				CharacterAppearance_Widget = CreateWidget<UWCPP_WidgetParent>(PlayerControllerRef.Get(), Class);
+				if (CharacterAppearance_Widget.IsValid())
+				{
+					CharacterAppearance_Widget->SetFlags(RF_StrongRefOnFrame);
+					CharacterAppearance_Widget->SetPlayerControllerRef(PlayerControllerRef.Get());
+					CharacterAppearance_Widget->SetGameInstanceRef(GameInstanceRef.Get());
+					CharacterAppearanceSizeBox->AddChild(CharacterAppearance_Widget.Get());
+				}
 			}
 		}
 	}
@@ -339,7 +349,7 @@ void UWCPP_MainMenu::InitCharacterAppearanceWidget()
 
 void UWCPP_MainMenu::DestroyCharacterAppearanceWidget()
 {
-	if (IsValid(CharacterAppearance_Widget))
+	if (CharacterAppearance_Widget.IsValid())
 	{
 		CharacterAppearance_Widget->RemoveFromParent();
 		CharacterAppearance_Widget = nullptr;
@@ -367,23 +377,26 @@ void UWCPP_MainMenu::SwitchToSettingsPanel()
 void UWCPP_MainMenu::InitSettingsWidget()
 {
 	if (Settings_Widget == nullptr &&
-		IsValid(PlayerControllerRef) &&
-		IsValid(GameInstanceRef))
+		PlayerControllerRef.IsValid() &&
+		GameInstanceRef.IsValid())
 	{
 		const FName Row = FName(TEXT("Settings"));
-		if (UClass* Class = GameInstanceRef->GetWidgetClassBySoftReference(
-			UCPP_StaticWidgetLibrary::GetSoftReferenceToWidgetBlueprintByRowName(
-				WidgetBlueprintsDataTable,
-				Row)))
+		if (IsValid(WidgetBlueprintsDataTable.LoadSynchronous()))
 		{
-			Settings_Widget = CreateWidget<UWCPP_Settings>(PlayerControllerRef, Class);
-			if (IsValid(Settings_Widget))
+			if (UClass* Class = GameInstanceRef->GetWidgetClassBySoftReference(
+				UCPP_StaticWidgetLibrary::GetSoftReferenceToWidgetBlueprintByRowName(
+					WidgetBlueprintsDataTable.Get(),
+					Row)))
 			{
-				Settings_Widget->SetFlags(RF_StrongRefOnFrame);
-				Settings_Widget->SetPlayerControllerRef(PlayerControllerRef);
-				Settings_Widget->SetGameInstanceRef(GameInstanceRef);
-				Settings_Widget->bIsMainMenu = true;
-				SettingsSizeBox->AddChild(Settings_Widget);
+				Settings_Widget = CreateWidget<UWCPP_Settings>(PlayerControllerRef.Get(), Class);
+				if (Settings_Widget.IsValid())
+				{
+					Settings_Widget->SetFlags(RF_StrongRefOnFrame);
+					Settings_Widget->SetPlayerControllerRef(PlayerControllerRef.Get());
+					Settings_Widget->SetGameInstanceRef(GameInstanceRef.Get());
+					Settings_Widget->bIsMainMenu = true;
+					SettingsSizeBox->AddChild(Settings_Widget.Get());
+				}
 			}
 		}
 	}
@@ -391,7 +404,7 @@ void UWCPP_MainMenu::InitSettingsWidget()
 
 void UWCPP_MainMenu::DestroySettingsWidget()
 {
-	if (IsValid(Settings_Widget))
+	if (Settings_Widget.IsValid())
 	{
 		Settings_Widget->RemoveFromParent();
 		Settings_Widget = nullptr;
@@ -419,22 +432,25 @@ void UWCPP_MainMenu::SwitchToStatisticsPanel()
 void UWCPP_MainMenu::InitStatisticsWidget()
 {
 	if (Statistics_Widget == nullptr &&
-		IsValid(PlayerControllerRef) &&
-		IsValid(GameInstanceRef))
+		PlayerControllerRef.IsValid() &&
+		GameInstanceRef.IsValid())
 	{
 		const FName Row = FName(TEXT("Statistics"));
-		if (UClass* Class = GameInstanceRef->GetWidgetClassBySoftReference(
-			UCPP_StaticWidgetLibrary::GetSoftReferenceToWidgetBlueprintByRowName(
-				WidgetBlueprintsDataTable,
-				Row)))
+		if (IsValid(WidgetBlueprintsDataTable.LoadSynchronous()))
 		{
-			Statistics_Widget = CreateWidget<UWCPP_WidgetParent>(PlayerControllerRef, Class);
-			if (IsValid(Statistics_Widget))
+			if (UClass* Class = GameInstanceRef->GetWidgetClassBySoftReference(
+				UCPP_StaticWidgetLibrary::GetSoftReferenceToWidgetBlueprintByRowName(
+					WidgetBlueprintsDataTable.Get(),
+					Row)))
 			{
-				Statistics_Widget->SetFlags(RF_StrongRefOnFrame);
-				Statistics_Widget->SetPlayerControllerRef(PlayerControllerRef);
-				Statistics_Widget->SetGameInstanceRef(GameInstanceRef);
-				StatisticsSizeBox->AddChild(Statistics_Widget);
+				Statistics_Widget = CreateWidget<UWCPP_WidgetParent>(PlayerControllerRef.Get(), Class);
+				if (Statistics_Widget.IsValid())
+				{
+					Statistics_Widget->SetFlags(RF_StrongRefOnFrame);
+					Statistics_Widget->SetPlayerControllerRef(PlayerControllerRef.Get());
+					Statistics_Widget->SetGameInstanceRef(GameInstanceRef.Get());
+					StatisticsSizeBox->AddChild(Statistics_Widget.Get());
+				}
 			}
 		}
 	}
@@ -442,7 +458,7 @@ void UWCPP_MainMenu::InitStatisticsWidget()
 
 void UWCPP_MainMenu::DestroyStatisticsWidget()
 {
-	if (IsValid(Statistics_Widget))
+	if (Statistics_Widget.IsValid())
 	{
 		Statistics_Widget->RemoveFromParent();
 		Statistics_Widget = nullptr;
@@ -470,24 +486,27 @@ void UWCPP_MainMenu::SwitchToInfoPanel()
 void UWCPP_MainMenu::InitInfoWidget()
 {
 	if (GameInfo_Widget == nullptr &&
-		IsValid(PlayerControllerRef) &&
-		IsValid(GameInstanceRef))
+		PlayerControllerRef.IsValid() &&
+		GameInstanceRef.IsValid())
 	{
 		const FName Row = FName(TEXT("GameInfo"));
-		if (UClass* Class = GameInstanceRef->GetWidgetClassBySoftReference(
-			UCPP_StaticWidgetLibrary::GetSoftReferenceToWidgetBlueprintByRowName(
-				WidgetBlueprintsDataTable,
-				Row)))
+		if (IsValid(WidgetBlueprintsDataTable.LoadSynchronous()))
 		{
-			GameInfo_Widget = CreateWidget<UWCPP_WidgetParent>(PlayerControllerRef, Class);
-			if (IsValid(GameInfo_Widget))
+			if (UClass* Class = GameInstanceRef->GetWidgetClassBySoftReference(
+				UCPP_StaticWidgetLibrary::GetSoftReferenceToWidgetBlueprintByRowName(
+					WidgetBlueprintsDataTable.Get(),
+					Row)))
 			{
-				GameInfo_Widget->SetFlags(RF_StrongRefOnFrame);
-				GameInfoSizeBox->AddChild(GameInfo_Widget);
+				GameInfo_Widget = CreateWidget<UWCPP_WidgetParent>(PlayerControllerRef.Get(), Class);
+				if (GameInfo_Widget.IsValid())
+				{
+					GameInfo_Widget->SetFlags(RF_StrongRefOnFrame);
+					GameInfoSizeBox->AddChild(GameInfo_Widget.Get());
+				}
 			}
 		}
 	}
-	else if (IsValid(GameInfo_Widget) && IsValid(PlayerControllerRef) && PlayerControllerRef->GetIsGamepadMode())
+	else if (GameInfo_Widget.IsValid() && PlayerControllerRef.IsValid() && PlayerControllerRef->GetIsGamepadMode())
 	{
 		GameInfo_Widget->SetFocusForGamepadMode();
 	}
@@ -495,7 +514,7 @@ void UWCPP_MainMenu::InitInfoWidget()
 
 void UWCPP_MainMenu::DestroyInfoWidget()
 {
-	if (IsValid(GameInfo_Widget))
+	if (GameInfo_Widget.IsValid())
 	{
 		GameInfo_Widget->RemoveFromParent();
 		GameInfo_Widget = nullptr;
@@ -527,14 +546,11 @@ void UWCPP_MainMenu::ChangeSaveSlotButtonOnClick()
 void UWCPP_MainMenu::ExitButtonOnClick()
 {
 	const UWorld* World = GetWorld();
-	if (PlayerControllerRef)
+	if (PlayerControllerRef.IsValid())
 	{
-		if (IsValid(PlayerControllerRef))
-		{
-			PlayerControllerRef->CallCollectingInfoForSavingItToFile();
-		}
+		PlayerControllerRef->CallCollectingInfoForSavingItToFile();
 		UKismetSystemLibrary::QuitGame(World,
-		                               PlayerControllerRef,
+		                               PlayerControllerRef.Get(),
 		                               EQuitPreference::Quit,
 		                               false);
 	}
@@ -555,7 +571,7 @@ void UWCPP_MainMenu::GoBackButtonOnClick()
 		return;
 	case 1: // Configure Level Params
 		{
-			if (IsValid(ConfigureLevelParams_Widget))
+			if (ConfigureLevelParams_Widget.IsValid())
 			{
 				ConfigureLevelParams_Widget->bIsWidgetActive = false;
 			}
@@ -567,7 +583,7 @@ void UWCPP_MainMenu::GoBackButtonOnClick()
 		}
 	case 2: // Rules
 		{
-			if (IsValid(Rules_Widget))
+			if (Rules_Widget.IsValid())
 			{
 				Rules_Widget->bIsWidgetActive = false;
 			}
@@ -579,7 +595,7 @@ void UWCPP_MainMenu::GoBackButtonOnClick()
 		}
 	case 3: // Character Appearance
 		{
-			if (IsValid(CharacterAppearance_Widget))
+			if (CharacterAppearance_Widget.IsValid())
 			{
 				CharacterAppearance_Widget->bIsWidgetActive = false;
 			}
@@ -610,7 +626,7 @@ void UWCPP_MainMenu::GoBackButtonOnClick()
 		}
 	case 6: // Game Info
 		{
-			if (IsValid(GameInfo_Widget))
+			if (GameInfo_Widget.IsValid())
 			{
 				GameInfo_Widget->bIsWidgetActive = false;
 			}
@@ -630,7 +646,7 @@ void UWCPP_MainMenu::GoBackButtonOnClick()
 		}
 	}
 
-	if (UserName.IsEmpty() && IsValid(PlayerControllerRef) && !PlayerControllerRef->GetCustomUserName().IsEmpty())
+	if (UserName.IsEmpty() && PlayerControllerRef.IsValid() && !PlayerControllerRef->GetCustomUserName().IsEmpty())
 	{
 		UserName = FText::FromString(PlayerControllerRef->GetCustomUserName());
 		TB_UserName->SetText(UserName);

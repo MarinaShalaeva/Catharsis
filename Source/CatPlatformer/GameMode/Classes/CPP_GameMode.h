@@ -89,9 +89,8 @@ public:
 	UFUNCTION()
 	void PreLogout(const APlayerController* InPlayerController) const;
 
-	/** Reference to the Game State. */
-	UPROPERTY()
-	ACPP_GameState* GameStateRef;
+	/** Weak pointer to the instance of ACPP_GameState class. */
+	TWeakObjectPtr<ACPP_GameState> GameStateRef;
 
 	/**
 	 * Flag indicating if platforms and buffs were already

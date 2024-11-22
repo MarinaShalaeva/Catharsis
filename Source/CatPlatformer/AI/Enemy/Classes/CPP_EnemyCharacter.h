@@ -70,18 +70,32 @@ public:
 	 * @param bApplyBasicSpeed Should basic or fast speed be
 	 * applied?
 	 */
+	UFUNCTION(Server, Reliable)
 	void ChangeFlyingSpeed(const bool bApplyBasicSpeed);
+
+private:
+	void ChangeFlyingSpeed_Implementation(const bool bApplyBasicSpeed);
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_ChangeFlyingSpeed(const bool bApplyBasicSpeed);
+	void Multicast_ChangeFlyingSpeed_Implementation(const bool bApplyBasicSpeed);
+
+public:
 	/**
 	 * Function for changing current walking speed.
 	 * @param bApplyBasicSpeed Should basic or fast speed be
 	 * applied?
 	 */
+	UFUNCTION(Server, Reliable)
 	void ChangeWalkingSpeed(const bool bApplyBasicSpeed);
 
 private:
-	/** Reference to the instance of ACPP_GameState class. */
-	UPROPERTY()
-	ACPP_GameState* GameStateRef;
+	void ChangeWalkingSpeed_Implementation(const bool bApplyBasicSpeed);
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_ChangeWalkingSpeed(const bool bApplyBasicSpeed);
+	void Multicast_ChangeWalkingSpeed_Implementation(const bool bApplyBasicSpeed);
+
+	/** Weak pointer to the instance of ACPP_GameState class. */
+	TWeakObjectPtr<ACPP_GameState> GameStateRef;
 
 	/** Current enemy's state. */
 	UPROPERTY(Replicated)
@@ -116,7 +130,7 @@ public:
 	FEnemyIsDead EnemyIsDeadDelegate;
 
 	/** Is the enemy character dead? */
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Enemy | Enemy State")
+	UPROPERTY(Replicated, VisibleAnywhere, BlueprintReadWrite, Category = "Enemy | Enemy State")
 	bool bIsDead;
 
 	/** Is the enemy character attacking someone now? */
