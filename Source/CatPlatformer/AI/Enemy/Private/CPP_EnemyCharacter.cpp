@@ -42,15 +42,26 @@ void ACPP_EnemyCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& 
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(ACPP_EnemyCharacter, bIsAttacking);
+	DOREPLIFETIME(ACPP_EnemyCharacter, bIsDead);
 	DOREPLIFETIME(ACPP_EnemyCharacter, EnemyState);
 }
 
-void ACPP_EnemyCharacter::ChangeFlyingSpeed(const bool bApplyBasicSpeed)
+void ACPP_EnemyCharacter::ChangeFlyingSpeed_Implementation(const bool bApplyBasicSpeed)
+{
+	Multicast_ChangeFlyingSpeed(bApplyBasicSpeed);
+}
+
+void ACPP_EnemyCharacter::Multicast_ChangeFlyingSpeed_Implementation(const bool bApplyBasicSpeed)
 {
 	GetCharacterMovement()->MaxFlySpeed = bApplyBasicSpeed ? BasicFlyingSpeed : ChasingFlyingSpeed;
 }
 
-void ACPP_EnemyCharacter::ChangeWalkingSpeed(const bool bApplyBasicSpeed)
+void ACPP_EnemyCharacter::ChangeWalkingSpeed_Implementation(const bool bApplyBasicSpeed)
+{
+	Multicast_ChangeWalkingSpeed(bApplyBasicSpeed);
+}
+
+void ACPP_EnemyCharacter::Multicast_ChangeWalkingSpeed_Implementation(const bool bApplyBasicSpeed)
 {
 	GetCharacterMovement()->MaxWalkSpeed = bApplyBasicSpeed ? BasicWalkingSpeed : ChasingWalkingSpeed;
 }
@@ -63,6 +74,9 @@ void ACPP_EnemyCharacter::OnAttackMontageEnded(UAnimMontage* AnimMontage, bool b
 float ACPP_EnemyCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent,
                                       AController* EventInstigator, AActor* DamageCauser)
 {
+	if (!HasAuthority())
+		return 0.0f;
+
 	if (!bIsDead)
 	{
 		if (AnimInstance->Montage_IsActive(FlyingAttackMontage))
@@ -79,11 +93,11 @@ float ACPP_EnemyCharacter::TakeDamage(float DamageAmount, FDamageEvent const& Da
 
 		if (const ACPP_Character* Player = Cast<ACPP_Character>(DamageCauser))
 		{
-			if (!IsValid(GameStateRef))
+			if (!GameStateRef.IsValid())
 			{
 				GameStateRef = Cast<ACPP_GameState>(UGameplayStatics::GetGameState(GetWorld()));
 			}
-			if (IsValid(GameStateRef))
+			if (GameStateRef.IsValid())
 			{
 				GameStateRef->AddUserScore(
 					IsValid(Player->GetPlayerStateRef())
@@ -142,7 +156,19 @@ void ACPP_EnemyCharacter::Multicast_Attack_Implementation(ACPP_Character* Charac
 
 void ACPP_EnemyCharacter::Server_CallSelfDestroying_Implementation()
 {
-	Multicast_CallSelfDestroying();
+	if (GetWorld()->GetTimerManager().TimerExists(TH_CallSelfDestroying))
+	{
+		GetWorld()->GetTimerManager().ClearTimer(TH_CallSelfDestroying);
+	}
+	if (IsValid(GetController()))
+	{
+		GetController()->Destroy();
+	}
+	if (IsValid(this))
+	{
+		Destroy();
+	}
+	//Multicast_CallSelfDestroying();
 }
 
 void ACPP_EnemyCharacter::Multicast_CallSelfDestroying_Implementation()
@@ -163,7 +189,8 @@ void ACPP_EnemyCharacter::Multicast_CallSelfDestroying_Implementation()
 
 void ACPP_EnemyCharacter::SetIsDead_Implementation(const bool bNewValue)
 {
-	Multicast_SetIsDead(bNewValue);
+	bIsDead = bNewValue;
+	//Multicast_SetIsDead(bNewValue);
 }
 
 void ACPP_EnemyCharacter::Multicast_SetIsDead_Implementation(const bool bNewValue)
@@ -178,7 +205,59 @@ bool ACPP_EnemyCharacter::GetIsDead() const
 
 void ACPP_EnemyCharacter::SetEnemyState_Implementation(const EEnemyState NewState)
 {
-	Multicast_SetEnemyState(NewState);
+	
+	if (EnemyState == EEnemyState::Dying)
+	{
+		return;
+	}
+
+	switch (NewState)
+	{
+	case EEnemyState::Walking:
+		{
+			if (EnemyState == EEnemyState::Flying)
+			{
+				GetCharacterMovement()->SetMovementMode(MOVE_Falling);
+			}
+			else
+			{
+				GetCharacterMovement()->SetMovementMode(MOVE_Walking);
+			}
+			break;
+		}
+	case EEnemyState::Flying:
+		{
+			GetCharacterMovement()->SetMovementMode(MOVE_Flying);
+			break;
+		}
+	case EEnemyState::ChasingCharacter:
+		break;
+	case EEnemyState::Attacking:
+		break;
+	case EEnemyState::Dying:
+		{
+			if (EnemyState == EEnemyState::Flying)
+			{
+				GetCharacterMovement()->SetMovementMode(MOVE_Falling);
+			}
+			else
+			{
+				GetCharacterMovement()->SetMovementMode(MOVE_Walking);
+			}
+			SetIsDead(true);
+			if (EnemyIsDeadDelegate.IsBound())
+			{
+				EnemyIsDeadDelegate.Execute();
+			}
+			if (!GetWorld()->GetTimerManager().TimerExists(TH_CallSelfDestroying))
+			{
+				Server_CallSelfDestroying();
+			}
+			break;
+		}
+	}
+	EnemyState = NewState;
+	//Multicast_SetEnemyState(NewState);
 }
 
 void ACPP_EnemyCharacter::Multicast_SetEnemyState_Implementation(const EEnemyState NewState)

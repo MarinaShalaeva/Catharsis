@@ -15,6 +15,12 @@ class UButton;
 class UVerticalBox;
 class UScrollBox;
 
+#ifndef CPP_PLAYERSTATE_H
+#define CPP_PLAYERSTATE_H
+#include "CatPlatformer/GameMode/Classes/CPP_PlayerState.h"
+#endif
+class ACPP_PlayerState;
+
 #include "WCPP_EndLevel.generated.h"
 
 /**
@@ -151,6 +157,41 @@ protected:
 	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Notification Inscriptions")
 	FText LevelIsLoadingInscription;
 
+	/**
+	 * Delegate handle for storing the response on Score
+	 * Changed Delegate from Player State class.
+	 */
+	FDelegateHandle DH_ScoreChanged;
+
+	/**
+	 * Weak pointer to the instance of ACPP_PlayerState class
+	 * associated with current widget.
+	 */
+	TWeakObjectPtr<ACPP_PlayerState> PlayerStateRef;
+
+	/**
+	 * Function that stores logic that should be applied when
+	 * the new character is possessed to the player controller.
+	 * @param NewCharacter Possessed Character.
+	 */
+	UFUNCTION()
+	void NewCharacterWasPossessed(ACPP_Character* NewCharacter);
+	
+	/**
+	 * Function that stores logic that should be applied when
+	 * the current player state was changed to the new one.
+	 * @param NewPlayerState Reference to the new player
+	 * state.
+	 */
+	UFUNCTION()
+	void PlayerStateWasChanged(ACPP_PlayerState* NewPlayerState);
+
+	/**
+	 * Function for changing score text block's value.
+	 * @param ScoreToAdd Score to add (or remove). 
+	 */
+	void ChangeScore(const int32 ScoreToAdd);
+	
 	/** Function for starting the next level. */
 	UFUNCTION()
 	void StartNextLevelButtonOnClick();

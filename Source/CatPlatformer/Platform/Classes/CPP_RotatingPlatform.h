@@ -26,22 +26,16 @@ protected:
 	ACPP_RotatingPlatform();
 
 	/**
-	 * Function for storing logic that should be applied
-	 * when the actor appears in the game world.
+	 * Returns the properties used for network replication.
+	 * @param OutLifetimeProps Lifetime properties.
 	 */
-	virtual void BeginPlay() override;
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	/** 
 	 * Function that is called every frame.
 	 * Is needed for updating platform's location.
 	 */
 	virtual void Tick(float DeltaSeconds) override;
-
-	/**
-	 * Returns the properties used for network replication.
-	 * @param OutLifetimeProps Lifetime properties.
-	 */
-	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	/** Flag indicating if basic variables were initialized. */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
@@ -63,37 +57,38 @@ private:
 	 * Function for one-time platform's rotating to make it
 	 * look like Y-axis rotating object.
 	 */
-	UFUNCTION(Server, Reliable)
-	void InitialPlatformRotation();
-	void InitialPlatformRotation_Implementation();
-	UFUNCTION(NetMulticast, Reliable)
-	void Multicast_InitialPlatformRotation();
-	void Multicast_InitialPlatformRotation_Implementation();
+	UFUNCTION()
+	void InitialPlatformRotation() const;
 
 	/**
 	 * Function for rotating the platform. Is called from the
 	 * tick event.
 	 */
 	UFUNCTION(Server, Reliable)
-	void RotatePlatform(const float& DeltaSeconds);
-	void RotatePlatform_Implementation(const float& DeltaSeconds);
-	UFUNCTION(NetMulticast, Reliable)
-	void Multicast_RotatePlatform(const float& DeltaSeconds);
-	void Multicast_RotatePlatform_Implementation(const float& DeltaSeconds);
+	void RotatePlatform(const float DeltaSeconds);
+	void RotatePlatform_Implementation(const float DeltaSeconds);
 
 protected:
-	/** Timer handle for platform's rotation. */
-	// FTimerHandle TH_Rotation;
+	/**
+	 * Axis around which the platform should be rotated.
+	 * true = X; false = Z.
+	 * Y is not used because of strange performance. To
+	 * simulate Y rotation the platform's component should
+	 * be rotated by 90 degree at the beginning of the
+	 * actor's life.
+	 */
+	bool bAxis;
 
-	/** Axis around which the platform should rotate. */
-	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Category = "Rotation")
-	FString Coordinate;
+	/**
+	 * Flag indicating if the platform should simulate Y-axis
+	 * rotating.
+	 */
+	UPROPERTY(Replicated)
+	bool bUseAxisY;
 
 	/** Rotation speed. */
-	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Category = "Rotation")
 	float Speed;
 
 	/** Direction of rotation. Can be positive or negative. */
-	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Category = "Rotation")
-	int32 Direction;
+	int8 Direction;
 };

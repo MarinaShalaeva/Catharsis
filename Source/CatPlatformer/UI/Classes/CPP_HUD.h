@@ -119,20 +119,23 @@ protected:
 	void PlayerStateWasChanged(ACPP_PlayerState* NewPlayerState);
 
 private:
-	/** Reference to the instance of UCPP_GameInstance class. */
-	UPROPERTY()
-	UCPP_GameInstance* GameInstanceRef;
-
 	/**
-	 * Reference to the instance of ACPP_PlayerController
+	 * Weak pointer to the instance of UCPP_GameInstance
 	 * class.
 	 */
-	UPROPERTY()
-	ACPP_PlayerController* PlayerControllerRef;
+	TWeakObjectPtr<UCPP_GameInstance> GameInstanceRef;
 
-	/** Reference to the instance of ACPP_PlayerState class. */
-	UPROPERTY()
-	ACPP_PlayerState* PlayerStateRef;
+	/**
+	 * Weak pointer to the instance of ACPP_PlayerController
+	 * class.
+	 */
+	TWeakObjectPtr<ACPP_PlayerController> PlayerControllerRef;
+
+	/**
+	 * Weak pointer to the instance of ACPP_PlayerState
+	 * class.
+	 */
+	TWeakObjectPtr<ACPP_PlayerState> PlayerStateRef;
 
 	/**
 	 * Delegate handle for storing the response on Level Was
@@ -151,49 +154,51 @@ protected:
 	 * widgets' classes.
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Data Table")
-	UDataTable* WidgetBlueprintsDataTable;
+	TSoftObjectPtr<UDataTable> WidgetBlueprintsDataTable;
 
 	/**
 	 * Data Table with the list of soft references to all
 	 * sound manager child classes.
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Data Table")
-	UDataTable* SoundManagersDataTable;
+	TSoftObjectPtr<UDataTable> SoundManagersDataTable;
 
 public:
-	/** Reference to the current Container widget blueprint. */
-	UPROPERTY()
-	UWCPP_Container* Container_Widget;
-
-	/**
-	 * Reference to the current Choose Save Slot widget
+	/** 
+	 * Weak pointer to the current Container widget
 	 * blueprint.
 	 */
-	UPROPERTY()
-	UWCPP_ChooseSaveSlot* ChooseSaveSlot_Widget;
-
-	/** Reference to the current Main Menu widget blueprint. */
-	UPROPERTY()
-	UWCPP_MainMenu* MainMenu_Widget;
-
-	/** Reference to the current Pause widget blueprint. */
-	UPROPERTY()
-	UWCPP_WidgetParent* Pause_Widget;
+	TWeakObjectPtr<UWCPP_Container> Container_Widget;
 
 	/**
-	 * Reference to the current Loading Screen widget
+	 * Weak pointer to the current Choose Save Slot widget
 	 * blueprint.
 	 */
-	UPROPERTY()
-	UWCPP_WidgetParent* LoadingScreen_Widget;
+	TWeakObjectPtr<UWCPP_ChooseSaveSlot> ChooseSaveSlot_Widget;
 
-	/** Reference to the current Level widget blueprint. */
-	UPROPERTY()
-	UWCPP_Level* Level_Widget;
+	/**
+	 * Weak pointer to the current Main Menu widget
+	 * blueprint.
+	 */
+	TWeakObjectPtr<UWCPP_MainMenu> MainMenu_Widget;
 
-	/** Reference to the current End Level widget blueprint. */
-	UPROPERTY()
-	UWCPP_EndLevel* EndLevel_Widget;
+	/** Weak pointer to the current Pause widget blueprint. */
+	TWeakObjectPtr<UWCPP_WidgetParent> Pause_Widget;
+
+	/**
+	 * Weak pointer to the current Loading Screen widget
+	 * blueprint.
+	 */
+	TWeakObjectPtr<UWCPP_WidgetParent> LoadingScreen_Widget;
+
+	/** Weak pointer to the current Level widget blueprint. */
+	TWeakObjectPtr<UWCPP_Level> Level_Widget;
+
+	/** 
+	 * Weak pointer to the current End Level widget
+	 * blueprint.
+	 */
+	TWeakObjectPtr<UWCPP_EndLevel> EndLevel_Widget;
 
 	/**
 	 * Inscription for notifying that all gamepads were

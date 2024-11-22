@@ -20,11 +20,11 @@ void UWCPP_GameInfo::NativeConstruct()
 {
 	Super::NativeConstruct();
 
-	if (!IsValid(PlayerControllerRef))
+	if (!PlayerControllerRef.IsValid())
 	{
 		PlayerControllerRef = Cast<ACPP_PlayerController>(GetOwningPlayer());
 	}
-	if (IsValid(PlayerControllerRef))
+	if (PlayerControllerRef.IsValid())
 	{
 		DH_GamepadScroll = PlayerControllerRef->GamepadScrollDelegate.AddUObject(this, &UWCPP_GameInfo::GamepadScroll);
 		DH_InputKeyWasPressed = PlayerControllerRef->InputKeyWasPressedDelegate.
@@ -42,7 +42,7 @@ void UWCPP_GameInfo::NativeConstruct()
 
 void UWCPP_GameInfo::NativeDestruct()
 {
-	if (IsValid(PlayerControllerRef))
+	if (PlayerControllerRef.IsValid())
 	{
 		PlayerControllerRef->GamepadScrollDelegate.Remove(DH_GamepadScroll);
 		DH_GamepadScroll.Reset();
@@ -122,9 +122,9 @@ void UWCPP_GameInfo::SetFocusForGamepadMode()
 	if (!bIsWidgetActive)
 		return;
 
-	if (IsValid(PlayerControllerRef))
+	if (PlayerControllerRef.IsValid())
 	{
-		Button_URL->SetUserFocus(PlayerControllerRef);
+		Button_URL->SetUserFocus(PlayerControllerRef.Get());
 	}
 	else
 	{

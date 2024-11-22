@@ -47,11 +47,10 @@ class CATPLATFORMER_API UWCPP_CharacterAppearance : public UWCPP_WidgetParent
 	virtual void NativeDestruct() override;
 
 	/**
-	 * Reference to the instance of ACPP_PlayerState class
-	 * associated with current widget.
+	 * Weak pointer to the instance of ACPP_PlayerState
+	 * class associated with current widget.
 	 */
-	UPROPERTY()
-	ACPP_PlayerState* PlayerStateRef;
+	TWeakObjectPtr<ACPP_PlayerState> PlayerStateRef;
 
 	/**
 	 * Delegate handle for storing the response on possessing

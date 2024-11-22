@@ -106,10 +106,6 @@ private:
 	 */
 	virtual void AddPlayerState(APlayerState* PlayerState) override;
 
-	UFUNCTION(Server, Reliable)
-	void Server_AddPlayerState(APlayerState* PlayerState);
-	void Server_AddPlayerState_Implementation(APlayerState* PlayerState);
-
 	UFUNCTION(NetMulticast, Reliable)
 	void Multicast_AddPlayerState(APlayerState* PlayerState);
 	void Multicast_AddPlayerState_Implementation(APlayerState* PlayerState);
@@ -121,6 +117,10 @@ private:
 	 * @param PlayerState Player State to remove.
 	 */
 	virtual void RemovePlayerState(APlayerState* PlayerState) override;
+
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_RemovePlayerState();
+	void Multicast_RemovePlayerState_Implementation();
 
 public:
 	/** Function for calling all cats' colors updating. */
@@ -138,10 +138,6 @@ public:
 private:
 	void CallLoadingScreenClosing_Implementation();
 
-	UFUNCTION(NetMulticast, Reliable)
-	void Multicast_CallLoadingScreenClosing();
-	void Multicast_CallLoadingScreenClosing_Implementation();
-
 public:
 	/**
 	 * Function that should be called after any player tells
@@ -154,9 +150,6 @@ public:
 
 private:
 	void PlayerCanStartTheLevel_Implementation(ACPP_PlayerState* PlayerState);
-	UFUNCTION(NetMulticast, Reliable)
-	void Multicast_PlayerCanStartTheLevel(ACPP_PlayerState* PlayerState);
-	void Multicast_PlayerCanStartTheLevel_Implementation(ACPP_PlayerState* PlayerState);
 
 	/**
 	 * Function for notifying other classes that all players
@@ -165,9 +158,6 @@ private:
 	UFUNCTION(Server, Reliable)
 	void NotifyThatLevelCanBeStarted();
 	void NotifyThatLevelCanBeStarted_Implementation();
-	UFUNCTION(NetMulticast, Reliable)
-	void Multicast_NotifyThatLevelCanBeStarted();
-	void Multicast_NotifyThatLevelCanBeStarted_Implementation();
 
 public:
 	/**
@@ -180,13 +170,6 @@ public:
 private:
 	void AddUserScore_Implementation(ACPP_PlayerState* PlayerState, const int32 ScoreToAdd);
 
-	UFUNCTION(NetMulticast, Reliable)
-	void Multicast_AddUserScore(ACPP_PlayerState* PlayerState, const int32 ScoreToAdd,
-	                            const TArray<APawn*>& Players, const TArray<FTransform>& PlayersTransforms);
-	void Multicast_AddUserScore_Implementation(ACPP_PlayerState* PlayerState, const int32 ScoreToAdd,
-	                                           const TArray<APawn*>& Players,
-	                                           const TArray<FTransform>& PlayersTransforms);
-
 public:
 	/**
 	 * Function that is called after one of the players
@@ -197,10 +180,6 @@ public:
 
 private:
 	void LevelWasEnded_Implementation();
-
-	UFUNCTION(NetMulticast, Reliable)
-	void Multicast_LevelWasEnded();
-	void Multicast_LevelWasEnded_Implementation();
 
 	/**
 	 * Function for getting the winner (or winners) of current
@@ -222,13 +201,26 @@ private:
 	void Multicast_CallSessionEnding_Implementation();
 
 protected:
+	/**
+	 * Blueprint class representing the firework that should
+	 * be spawned nearby the winners.
+	 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Victory")
 	TSubclassOf<ACPP_VictoryFirework> VictoryFireworkClass;
 
 private:
+	/**
+	 * Function for spawning the firework nearby the winners. 
+	 * @param InWinners The list of winners.
+	 */
 	UFUNCTION(Server, Reliable)
 	void SpawnVictoryFireworks(const TArray<ACPP_PlayerState*>& InWinners);
 	void SpawnVictoryFireworks_Implementation(const TArray<ACPP_PlayerState*>& InWinners);
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_SpawnVictoryFireworks(const TArray<bool>& SoundsToPlay,
+	                                     const TArray<FVector>& FireworkLocations);
+	void Multicast_SpawnVictoryFireworks_Implementation(const TArray<bool>& SoundsToPlay,
+	                                                    const TArray<FVector>& FireworkLocations);
 
 public:
 	/**

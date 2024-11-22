@@ -3,7 +3,7 @@
 #include "../Classes/CPP_SoundManagerLevel.h"
 #include "Components/AudioComponent.h"
 
-ACPP_SoundManagerLevel::ACPP_SoundManagerLevel() : ACPP_SoundManager()
+ACPP_SoundManagerLevel::ACPP_SoundManagerLevel()
 {
 	L_TrackAudioComponent_1 = CreateDefaultSubobject<UAudioComponent>(TEXT("Level Audio Component 1"));
 	L_TrackAudioComponent_1->SetupAttachment(RootComponent);
@@ -74,7 +74,7 @@ void ACPP_SoundManagerLevel::ApplySettingsFromTheSaveFile(const bool bSetDefault
 {
 	Super::ApplySettingsFromTheSaveFile(bSetDefaultValues, bIsAdditionalSoundManager);
 
-	if (!bSetDefaultValues && IsValid(PlayerStateRef))
+	if (!bSetDefaultValues && PlayerStateRef.IsValid())
 	{
 		PlaylistRepeatingMode = PlayerStateRef->Get_L_PlaylistRepeatingMode();
 

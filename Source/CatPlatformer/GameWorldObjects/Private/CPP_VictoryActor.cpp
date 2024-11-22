@@ -10,7 +10,12 @@
 #endif
 class ACPP_GameState;
 
-ACPP_VictoryActor::ACPP_VictoryActor()
+ACPP_VictoryActor::ACPP_VictoryActor() : ScoreToAdd(30),
+                                         SpawningOffset(FVector(-34.0f, -38.0f, 255.0f)),
+                                         RotationSpeed(4.4f),
+                                         StartPosition(FVector(0.0f)),
+                                         EndPosition(FVector(0.0f)),
+                                         ZPositionOffset(30.0f)
 {
 	PrimaryActorTick.bCanEverTick = true;
 
@@ -22,7 +27,7 @@ ACPP_VictoryActor::ACPP_VictoryActor()
 
 	TimelineComp = CreateDefaultSubobject<UTimelineComponent>(FName(TEXT("TimelineComponent")));
 
-	ScoreToAdd = 30;
+	/*ScoreToAdd = 30;
 
 	SpawningOffset = FVector(-34.0f, -38.0f, 255.0f);
 
@@ -30,7 +35,7 @@ ACPP_VictoryActor::ACPP_VictoryActor()
 
 	StartPosition = FVector(0.0f);
 	EndPosition = FVector(0.0f);
-	ZPositionOffset = 0.0f;
+	ZPositionOffset = 0.0f;*/
 
 	bReplicates = true;
 	bAlwaysRelevant = true;
@@ -40,40 +45,45 @@ void ACPP_VictoryActor::BeginPlay()
 {
 	Super::BeginPlay();
 
-	SM_Base->OnComponentBeginOverlap.AddDynamic(this, &ACPP_VictoryActor::StaticMeshOverlapBegin);
+	SM_Base->OnComponentBeginOverlap.AddUniqueDynamic(this, &ACPP_VictoryActor::StaticMeshOverlapBegin);
 
-	if (SmoothZMovementCurveFloat)
+	if (HasAuthority() && SmoothZMovementCurveFloat)
 	{
 		TimelineComp->Play();
 	}
-
-	GetWorld()->GetTimerManager().SetTimer(
-		TH_Rotation,
-		this,
-		&ACPP_VictoryActor::RotateActorAroundItsAxis,
-		0.05f,
-		true);
 }
 
 void ACPP_VictoryActor::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-	SmoothZMovementProgressDelegate.Unbind();
-	SmoothZMovementTimelineEndedDelegate.Unbind();
-	GetWorld()->GetTimerManager().ClearAllTimersForObject(this);
+	SM_Base->OnComponentBeginOverlap.RemoveDynamic(this, &ACPP_VictoryActor::StaticMeshOverlapBegin);
 
+	if (HasAuthority())
+	{
+		SmoothZMovementProgressDelegate.Unbind();
+		SmoothZMovementTimelineEndedDelegate.Unbind();
+	}
 	Super::EndPlay(EndPlayReason);
+}
+
+void ACPP_VictoryActor::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+	RotateActorAroundItsAxis(DeltaSeconds);
 }
 
 void ACPP_VictoryActor::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-	DOREPLIFETIME(ACPP_VictoryActor, StartPosition);
-	DOREPLIFETIME(ACPP_VictoryActor, EndPosition);
+	/*DOREPLIFETIME(ACPP_VictoryActor, StartPosition);
+	DOREPLIFETIME(ACPP_VictoryActor, EndPosition);*/
 }
 
 void ACPP_VictoryActor::InitializeBasicVariables_Implementation(const FVector& StartLocation)
 {
+	if (!HasAuthority())
+		return;
+
 	if (SmoothZMovementCurveFloat)
 	{
 		StartPosition = StartLocation;
@@ -95,21 +105,30 @@ void ACPP_VictoryActor::StaticMeshOverlapBegin(UPrimitiveComponent* OverlappedCo
                                                UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep,
                                                const FHitResult& SweepResult)
 {
+	if (!HasAuthority())
+		return;
+
 	if (ACPP_Character* Character = Cast<ACPP_Character>(OtherActor))
 	{
 		CollectStaticMesh(Character);
 	}
 }
 
+
 void ACPP_VictoryActor::CollectStaticMesh_Implementation(ACPP_Character* Character)
 {
+	if (!HasAuthority())
+		return;
+
 	ACPP_GameState* GS = Cast<ACPP_GameState>(UGameplayStatics::GetGameState(GetWorld()));
 	GS->AddUserScore(IsValid(Character->GetPlayerStateRef())
 		                 ? Character->GetPlayerStateRef()
 		                 : Cast<ACPP_PlayerState>(Character->GetPlayerState()), ScoreToAdd);
-	//Character->Multicast_AddScore(ScoreToAdd);
 	GS->LevelWasEnded();
-	Multicast_CollectStaticMesh(Character);
+	if (IsValid(this))
+	{
+		Destroy();
+	}
 }
 
 void ACPP_VictoryActor::Multicast_CollectStaticMesh_Implementation(ACPP_Character* Character)
@@ -120,10 +139,10 @@ void ACPP_VictoryActor::Multicast_CollectStaticMesh_Implementation(ACPP_Characte
 	}
 }
 
-void ACPP_VictoryActor::RotateActorAroundItsAxis()
+void ACPP_VictoryActor::RotateActorAroundItsAxis(const float DeltaSeconds)
 {
 	// X = Roll, Y = Pitch, Z = Yaw.
-	AddActorWorldRotation(FRotator(0.0f, RotationSpeed, 0.0f));
+	AddActorWorldRotation(FRotator(0.0f, RotationSpeed * DeltaSeconds, 0.0f));
 }
 
 void ACPP_VictoryActor::SmoothZMovementTimelineProgress_Implementation(float Value)

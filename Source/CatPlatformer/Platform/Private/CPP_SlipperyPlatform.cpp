@@ -2,6 +2,7 @@
 
 #include "../Classes/CPP_SlipperyPlatform.h"
 #include "Components/BoxComponent.h"
+#include "Net/UnrealNetwork.h"
 
 #ifndef CPP_CHARACTER_H
 #define CPP_CHARACTER_H
@@ -19,6 +20,9 @@ ACPP_SlipperyPlatform::ACPP_SlipperyPlatform()
 	CollisionBox = CreateDefaultSubobject<UBoxComponent>(FName(TEXT("Collision")));
 	CollisionBox->SetupAttachment(PlatformBase);
 
+	IceAudioComponent = CreateDefaultSubobject<UAudioComponent>(FName(TEXT("Ice Sound")));
+	IceAudioComponent->SetupAttachment(PlatformBase);
+
 	TimelineComp = CreateDefaultSubobject<UTimelineComponent>(FName(TEXT("Timeline Component")));
 
 	StartRotation = FRotator(0.0f);
@@ -31,41 +35,65 @@ void ACPP_SlipperyPlatform::BeginPlay()
 {
 	Super::BeginPlay();
 
-	CollisionBox->OnComponentBeginOverlap.AddDynamic(this, &ACPP_SlipperyPlatform::CollisionBoxOverlapBegin);
-	CollisionBox->OnComponentEndOverlap.AddDynamic(this, &ACPP_SlipperyPlatform::CollisionBoxOverlapEnd);
-
-	if (CurveVector)
+	if (HasAuthority())
 	{
-		StartRotation = GetActorRotation();
-		EndRotation = FRotator(StartRotation.Pitch + CircularRotationOffset,
-		                       StartRotation.Yaw,
-		                       StartRotation.Roll + CircularRotationOffset);
+		CollisionBox->OnComponentBeginOverlap.AddDynamic(this, &ACPP_SlipperyPlatform::CollisionBoxOverlapBegin);
+		CollisionBox->OnComponentEndOverlap.AddDynamic(this, &ACPP_SlipperyPlatform::CollisionBoxOverlapEnd);
 
-		TimelineProgressDelegate.BindUFunction(this, FName(TEXT("CircularRotationTimelineProgress")));
+		TimelineComp->SetIsReplicated(true);
+		if (CurveVector)
+		{
+			StartRotation = GetActorRotation();
+			EndRotation = FRotator(StartRotation.Pitch + CircularRotationOffset,
+			                       StartRotation.Yaw,
+			                       StartRotation.Roll + CircularRotationOffset);
 
-		TimelineComp->AddInterpVector(CurveVector, TimelineProgressDelegate);
-		TimelineComp->SetLooping(true);
-		TimelineComp->SetIgnoreTimeDilation(true);
+			TimelineProgressDelegate.BindUFunction(this, FName(TEXT("CircularRotationTimelineProgress")));
+
+			TimelineComp->AddInterpVector(CurveVector, TimelineProgressDelegate);
+			TimelineComp->SetLooping(true);
+			TimelineComp->SetIgnoreTimeDilation(true);
+		}
 	}
 }
 
 void ACPP_SlipperyPlatform::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-	CollisionBox->OnComponentBeginOverlap.RemoveDynamic(this, &ACPP_SlipperyPlatform::CollisionBoxOverlapBegin);
-	CollisionBox->OnComponentEndOverlap.RemoveDynamic(this, &ACPP_SlipperyPlatform::CollisionBoxOverlapEnd);
-
-	if (CurveVector)
+	if (HasAuthority())
 	{
-		TimelineProgressDelegate.Unbind();
-	}
+		CollisionBox->OnComponentBeginOverlap.RemoveDynamic(this, &ACPP_SlipperyPlatform::CollisionBoxOverlapBegin);
+		CollisionBox->OnComponentEndOverlap.RemoveDynamic(this, &ACPP_SlipperyPlatform::CollisionBoxOverlapEnd);
 
+		if (CurveVector)
+		{
+			TimelineProgressDelegate.Unbind();
+		}
+	}
 	Super::EndPlay(EndPlayReason);
+}
+
+void ACPP_SlipperyPlatform::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(ACPP_SlipperyPlatform, bPlatformAppearanceType);
+}
+
+void ACPP_SlipperyPlatform::InitializeBasicVariables_Implementation(const FVector StartLocation)
+{
+	if (!HasAuthority())
+		return;
+
+	bPlatformAppearanceType = FMath::RandBool();
 }
 
 void ACPP_SlipperyPlatform::CollisionBoxOverlapBegin(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
                                                      UPrimitiveComponent* OtherComp, int32 OtherBodyIndex,
                                                      bool bFromSweep, const FHitResult& SweepResult)
 {
+	if (!HasAuthority())
+		return;
+
 	if (ACPP_Character* Character = Cast<ACPP_Character>(OtherActor))
 	{
 		Character->ChangeCharactersSliding(true);
@@ -82,6 +110,9 @@ void ACPP_SlipperyPlatform::CollisionBoxOverlapBegin(UPrimitiveComponent* Overla
 void ACPP_SlipperyPlatform::CollisionBoxOverlapEnd(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
                                                    UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
+	if (!HasAuthority())
+		return;
+
 	if (ACPP_Character* Character = Cast<ACPP_Character>(OtherActor))
 	{
 		Character->ChangeCharactersSliding(false);
@@ -95,6 +126,27 @@ void ACPP_SlipperyPlatform::CollisionBoxOverlapEnd(UPrimitiveComponent* Overlapp
 			if (TimelineComp->IsPlaying())
 			{
 				TimelineComp->Stop();
+			}
+		}
+	}
+}
+
+void ACPP_SlipperyPlatform::SwitchSoundState_Implementation(const bool bTurnOn)
+{
+	if (IsValid(IceAudioComponent) && IsValid(IceAudioComponent->GetSound()))
+	{
+		if (bTurnOn)
+		{
+			if (!IceAudioComponent->IsPlaying())
+			{
+				IceAudioComponent->Play(0.0f);
+			}
+		}
+		else
+		{
+			if (IceAudioComponent->IsPlaying())
+			{
+				IceAudioComponent->Stop();
 			}
 		}
 	}

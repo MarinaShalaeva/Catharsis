@@ -68,7 +68,7 @@ protected:
 	 * widgets' classes.
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Data Table")
-	UDataTable* WidgetBlueprintsDataTable;
+	TSoftObjectPtr<UDataTable> WidgetBlueprintsDataTable;
 
 	//========================Login================================
 
@@ -111,34 +111,38 @@ protected:
 	//===================Widgets instances=========================
 
 	/**
-	 * Reference to the current Configure Level Params widget
-	 * blueprint.
+	 * Weak pointer to the current Configure Level Params
+	 * widget blueprint.
 	 */
-	UPROPERTY()
-	UWCPP_WidgetParent* ConfigureLevelParams_Widget;
+	TWeakObjectPtr<UWCPP_WidgetParent> ConfigureLevelParams_Widget;
 
 	/**
-	 * Reference to the current Character Appearance widget
+	 * Weak pointer to the current Character Appearance
+	 * widget blueprint.
+	 */
+	TWeakObjectPtr<UWCPP_WidgetParent> CharacterAppearance_Widget;
+
+	/**
+	 * Weak pointer to the current Rules widget blueprint.
+	 */
+	TWeakObjectPtr<UWCPP_WidgetParent> Rules_Widget;
+
+	/** 
+	 * Weak pointer to the current Settings widget blueprint.
+	 */
+	TWeakObjectPtr<UWCPP_Settings> Settings_Widget;
+
+	/** 
+	 * Weak pointer to the current Statistics widget
 	 * blueprint.
 	 */
-	UPROPERTY()
-	UWCPP_WidgetParent* CharacterAppearance_Widget;
+	TWeakObjectPtr<UWCPP_WidgetParent> Statistics_Widget;
 
-	/** Reference to the current Rules widget blueprint. */
-	UPROPERTY()
-	UWCPP_WidgetParent* Rules_Widget;
-
-	/** Reference to the current Settings widget blueprint. */
-	UPROPERTY()
-	UWCPP_Settings* Settings_Widget;
-
-	/** Reference to the current Statistics widget blueprint. */
-	UPROPERTY()
-	UWCPP_WidgetParent* Statistics_Widget;
-
-	/** Reference to the current Game Info widget blueprint. */
-	UPROPERTY()
-	UWCPP_WidgetParent* GameInfo_Widget;
+	/** 
+	 * Weak pointer to the current Game Info widget
+	 * blueprint.
+	 */
+	TWeakObjectPtr<UWCPP_WidgetParent> GameInfo_Widget;
 
 	//=====================Inscriptions============================
 

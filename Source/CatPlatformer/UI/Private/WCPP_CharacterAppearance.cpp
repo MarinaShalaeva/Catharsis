@@ -19,14 +19,14 @@ void UWCPP_CharacterAppearance::NativeConstruct()
 {
 	Super::NativeConstruct();
 
-	if (!IsValid(GameInstanceRef))
+	if (!GameInstanceRef.IsValid())
 	{
 		GameInstanceRef = Cast<UCPP_GameInstance>(GetGameInstance());
 	}
 
-	if (!IsValid(PlayerControllerRef))
+	if (!PlayerControllerRef.IsValid())
 	{
-		if (IsValid(GameInstanceRef))
+		if (GameInstanceRef.IsValid())
 		{
 			if (GameInstanceRef->GetPlayingModeAsInt() == 1)
 			{
@@ -43,7 +43,7 @@ void UWCPP_CharacterAppearance::NativeConstruct()
 		}
 	}
 
-	if (IsValid(PlayerControllerRef))
+	if (PlayerControllerRef.IsValid())
 	{
 		DH_InputKeyWasPressed = PlayerControllerRef->InputKeyWasPressedDelegate.
 		                                             AddUObject(this, &UWCPP_CharacterAppearance::AnyKeyPressed);
@@ -73,13 +73,13 @@ void UWCPP_CharacterAppearance::NativeConstruct()
 
 void UWCPP_CharacterAppearance::NativeDestruct()
 {
-	if (IsValid(PlayerStateRef))
+	if (PlayerStateRef.IsValid())
 	{
 		PlayerStateRef->SaveDataToFile();
 		PlayerStateRef = nullptr;
 	}
 
-	if (IsValid(PlayerControllerRef))
+	if (PlayerControllerRef.IsValid())
 	{
 		PlayerControllerRef->InputKeyWasPressedDelegate.Remove(DH_InputKeyWasPressed);
 		DH_InputKeyWasPressed.Reset();
@@ -199,19 +199,19 @@ void UWCPP_CharacterAppearance::SetFocusForGamepadMode()
 	if (!bIsWidgetActive)
 		return;
 
-	if (IsValid(PlayerControllerRef))
+	if (PlayerControllerRef.IsValid())
 	{
 		if (GrayColor_CheckBox->GetCheckedState() == ECheckBoxState::Checked)
 		{
-			GrayColor_CheckBox->SetUserFocus(PlayerControllerRef);
+			GrayColor_CheckBox->SetUserFocus(PlayerControllerRef.Get());
 		}
 		else if (OrangeColor_CheckBox->GetCheckedState() == ECheckBoxState::Checked)
 		{
-			OrangeColor_CheckBox->SetUserFocus(PlayerControllerRef);
+			OrangeColor_CheckBox->SetUserFocus(PlayerControllerRef.Get());
 		}
 		else if (BlackColor_CheckBox->GetCheckedState() == ECheckBoxState::Checked)
 		{
-			BlackColor_CheckBox->SetUserFocus(PlayerControllerRef);
+			BlackColor_CheckBox->SetUserFocus(PlayerControllerRef.Get());
 		}
 	}
 	else

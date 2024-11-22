@@ -346,9 +346,8 @@ private:
 	UPROPERTY(Replicated)
 	ACPP_Character* CharacterRef;
 
-	/** Reference to the instance of UCPP_GameInstance class. */
-	UPROPERTY()
-	UCPP_GameInstance* GameInstanceRef;
+	/** Weak pointer to the instance of UCPP_GameInstance class. */
+	TWeakObjectPtr<UCPP_GameInstance> GameInstanceRef;
 
 	/** Reference to the instance of ACPP_SoundManager class. */
 	UPROPERTY()

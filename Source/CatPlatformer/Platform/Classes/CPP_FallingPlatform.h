@@ -42,12 +42,6 @@ protected:
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 	/**
-	 * Returns the properties used for network replication.
-	 * @param OutLifetimeProps Lifetime properties.
-	 */
-	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
-
-	/**
 	 * Function for initializing variables before this
 	 * actor appears in the game world.
 	 * Should be called before BeginPlay() (between
@@ -108,8 +102,9 @@ protected:
 	 * Function for the fallen platform's teleportation to
 	 * the start position.
 	 */
-	UFUNCTION()
+	UFUNCTION(Server, Reliable)
 	void TeleportPlatformToStartPosition();
+	void TeleportPlatformToStartPosition_Implementation();
 
 	/**
 	 * Collision box to check if the player has stepped on
@@ -128,14 +123,14 @@ protected:
 	 * The speed at which the platform will fall after the
 	 * player steps on it.
 	 */
-	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Category = "Falling")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Falling")
 	float FallingSpeed;
 
 	/**
 	 * The number of seconds that the platform will shake
 	 * before it falls.
 	 */
-	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Category = "Falling")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Falling")
 	float SecondsBeforeFall;
 	
 	//======================Timeline===============================

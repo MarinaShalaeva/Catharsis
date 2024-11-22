@@ -54,13 +54,12 @@ protected:
 	 * widgets' classes.
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Data Table")
-	UDataTable* WidgetBlueprintsDataTable;
+	TSoftObjectPtr<UDataTable> WidgetBlueprintsDataTable;
 
 	//===================Widgets instances=========================
 private:
-	/** Reference to the current Settings widget blueprint. */
-	UPROPERTY()
-	UWCPP_Settings* Settings_Widget;
+	/** Weak pointer to the current Settings widget blueprint. */
+	TWeakObjectPtr<UWCPP_Settings> Settings_Widget;
 
 	//=====================Inscriptions============================
 protected:

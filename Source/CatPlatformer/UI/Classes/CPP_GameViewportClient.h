@@ -58,7 +58,9 @@ class CATPLATFORMER_API UCPP_GameViewportClient : public UGameViewportClient
 	 */
 	FDelegateHandle DH_ChangeActiveSplitscreenType;
 
-	/** Reference to the instance of UCPP_GameInstance class. */
-	UPROPERTY()
-	UCPP_GameInstance* GameInstanceRef = nullptr;
+	/**
+	 * Weak pointer to the instance of UCPP_GameInstance
+	 * class.
+	 */
+	TWeakObjectPtr<UCPP_GameInstance> GameInstanceRef = nullptr;
 };

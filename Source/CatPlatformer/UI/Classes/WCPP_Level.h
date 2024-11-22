@@ -29,6 +29,12 @@ class UWCPP_BuffSlot;
 #endif
 class ACPP_GameState;
 
+#ifndef CPP_PLAYERSTATE_H
+#define CPP_PLAYERSTATE_H
+#include "CatPlatformer/GameMode/Classes/CPP_PlayerState.h"
+#endif
+class ACPP_PlayerState;
+
 #include "WCPP_Level.generated.h"
 
 /**
@@ -60,15 +66,13 @@ class CATPLATFORMER_API UWCPP_Level : public UWCPP_WidgetParent
 	virtual void NativeDestruct() override;
 
 	/**
-	 * Reference to the instance of ACPP_PlayerState class
+	 * Weak pointer to the instance of ACPP_PlayerState class
 	 * associated with current widget.
 	 */
-	UPROPERTY()
-	ACPP_PlayerState* PlayerStateRef;
+	TWeakObjectPtr<ACPP_PlayerState> PlayerStateRef;
 
-	/** Reference to the instance of ACPP_GameState class. */
-	UPROPERTY()
-	ACPP_GameState* GameStateRef;
+	/** Weak pointer to the instance of ACPP_GameState class. */
+	TWeakObjectPtr<ACPP_GameState> GameStateRef;
 
 	/**
 	 * Delegate handle for storing the response on Players
@@ -309,6 +313,12 @@ private:
 	/** Function for copying current online «room» number. */
 	UFUNCTION()
 	void CopyRoomNumberButtonOnClick();
+	
+	/**
+	 * Delegate handle for storing the response on Score
+	 * Changed Delegate from Player State class.
+	 */
+	FDelegateHandle DH_ScoreChanged;
 
 	/**
 	 * Delegate handle for storing the response on Should

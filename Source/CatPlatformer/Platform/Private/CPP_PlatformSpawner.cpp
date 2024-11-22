@@ -11,21 +11,31 @@ UCPP_PlatformSpawner::UCPP_PlatformSpawner()
 
 void UCPP_PlatformSpawner::InitGameInstanceRef(UGameInstance* GI)
 {
-	GameInstanceRef = Cast<UCPP_GameInstance>(GI);
+	if (IsValid(GI))
+	{
+		GameInstanceRef = Cast<UCPP_GameInstance>(GI);
+	}
+}
+
+void UCPP_PlatformSpawner::InitGameModeRef(ACPP_GameMode* GM)
+{
+	if (IsValid(GM))
+	{
+		GameModeRef = GM;
+	}
 }
 
 bool UCPP_PlatformSpawner::SpawnPlatforms_Validate(UWorld* WorldContext,
                                                    const TArray<TSoftClassPtr<ACPP_Platform>>& PlatformClasses,
                                                    const TSoftClassPtr<ACPP_Platform>& FinalPlatformClass,
                                                    const TSoftClassPtr<ACPP_VictoryActor>& VictoryActorClass,
-                                                   const int32& Length,
-                                                   const int32& Width,
-                                                   const float& PlatformsZCoordinateOffset,
-                                                   const float& SpawnDistance)
+                                                   const int32 Length, const int32 Width,
+                                                   const float PlatformsZCoordinateOffset,
+                                                   const float SpawnDistance)
 {
 	bool bSuccess = true;
 
-	if (!WorldContext || Length <= 0 || Width <= 0 || PlatformClasses.Num() <= 0 || !IsValid(GameInstanceRef))
+	if (!WorldContext || Length <= 0 || Width <= 0 || PlatformClasses.Num() <= 0 || !GameInstanceRef.IsValid())
 		bSuccess = false;
 
 	return bSuccess;
@@ -35,10 +45,9 @@ void UCPP_PlatformSpawner::SpawnPlatforms_Implementation(UWorld* WorldContext,
                                                          const TArray<TSoftClassPtr<ACPP_Platform>>& PlatformClasses,
                                                          const TSoftClassPtr<ACPP_Platform>& FinalPlatformClass,
                                                          const TSoftClassPtr<ACPP_VictoryActor>& VictoryActorClass,
-                                                         const int32& Length,
-                                                         const int32& Width,
-                                                         const float& PlatformsZCoordinateOffset,
-                                                         const float& SpawnDistance)
+                                                         const int32 Length, const int32 Width,
+                                                         const float PlatformsZCoordinateOffset,
+                                                         const float SpawnDistance)
 {
 	const int32 MaximumPlatformIndex = PlatformClasses.Num() - 1;
 
@@ -52,7 +61,6 @@ void UCPP_PlatformSpawner::SpawnPlatforms_Implementation(UWorld* WorldContext,
 		StartCoordinateY = -(Width / 2) * SpawnDistance + (SpawnDistance / 2);
 	}
 
-	// UWorld* World = GEngine->GameViewport->GetWorld();
 	float CoordinateX = 0.0f;
 	for (int32 i = 0; i < Length; i++)
 	{
@@ -74,12 +82,12 @@ void UCPP_PlatformSpawner::SpawnPlatforms_Implementation(UWorld* WorldContext,
 				GameInstanceRef->GetActorClassBySoftReference
 				(PlatformClasses[FMath::RandRange(0, MaximumPlatformIndex)]),
 				FTransform::Identity,
-				nullptr,
+				GameModeRef.IsValid() ? GameModeRef.Get() : nullptr,
 				nullptr,
 				ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
 
 			Platform->InitializeBasicVariables(Transform.GetLocation());
-			
+
 			UGameplayStatics::FinishSpawningActor(Platform, Transform);
 
 			CoordinateY += SpawnDistance;
@@ -98,7 +106,7 @@ void UCPP_PlatformSpawner::SpawnPlatforms_Implementation(UWorld* WorldContext,
 	ACPP_VictoryActor* VictoryActor = WorldContext->SpawnActorDeferred<ACPP_VictoryActor>(
 		GameInstanceRef->GetActorClassBySoftReference(VictoryActorClass),
 		FTransform::Identity,
-		nullptr,
+		GameModeRef.IsValid() ? GameModeRef.Get() : nullptr,
 		nullptr,
 		ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
 	FVector VictoryActorLocation = FVector(FinalPlatformLocation.X + VictoryActor->SpawningOffset.X,
@@ -113,17 +121,17 @@ void UCPP_PlatformSpawner::SpawnPlatforms_Implementation(UWorld* WorldContext,
 bool UCPP_PlatformSpawner::SpawnBuffs_Validate(UWorld* WorldContext,
                                                const TArray<TSoftClassPtr<ACPP_Buff>>& BuffsClasses,
                                                const TArray<float>& BuffsSelectionProbabilities,
-                                               const int32& TotalBuffsNumber,
-                                               const int32& Length,
-                                               const int32& Width,
-                                               const float& PlatformsSpawnDistance)
+                                               const int32 TotalBuffsNumber,
+                                               const int32 Length,
+                                               const int32 Width,
+                                               const float PlatformsSpawnDistance)
 {
 	bool bSuccess = true;
 
 	if (!WorldContext || BuffsClasses.Num() <= 0 ||
 		Length <= 0 || Width <= 0 || TotalBuffsNumber <= 0 ||
 		BuffsSelectionProbabilities.Num() != BuffsClasses.Num() ||
-		!IsValid(GameInstanceRef))
+		!GameInstanceRef.IsValid())
 	{
 		bSuccess = false;
 	}
@@ -134,10 +142,10 @@ bool UCPP_PlatformSpawner::SpawnBuffs_Validate(UWorld* WorldContext,
 void UCPP_PlatformSpawner::SpawnBuffs_Implementation(UWorld* WorldContext,
                                                      const TArray<TSoftClassPtr<ACPP_Buff>>& BuffsClasses,
                                                      const TArray<float>& BuffsSelectionProbabilities,
-                                                     const int32& TotalBuffsNumber,
-                                                     const int32& Length,
-                                                     const int32& Width,
-                                                     const float& PlatformsSpawnDistance)
+                                                     const int32 TotalBuffsNumber,
+                                                     const int32 Length,
+                                                     const int32 Width,
+                                                     const float PlatformsSpawnDistance)
 {
 	float OriginX;
 	if (Length % 2 == 1)
@@ -189,7 +197,7 @@ void UCPP_PlatformSpawner::SpawnBuffs_Implementation(UWorld* WorldContext,
 		ACPP_Buff* Buff = WorldContext->SpawnActorDeferred<ACPP_Buff>(
 			GameInstanceRef->GetActorClassBySoftReference(BuffsClasses[Index]),
 			FTransform::Identity,
-			nullptr,
+			GameModeRef.IsValid() ? GameModeRef.Get() : nullptr,
 			nullptr,
 			ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
 

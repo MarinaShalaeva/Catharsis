@@ -105,15 +105,11 @@ protected:
 		meta = (AllowPrivateAccess = "true"))
 	USphereComponent* LeftPawCollision;
 
-private:
-	/** Player's start transform (location, rotation and scale). */
-	UPROPERTY()
-	FTransform StartTransform;
-
 	//==Personal variables that aren't available to other players==
 
 protected:
 	/** If character uses the sprint mode. */
+	UPROPERTY(Replicated)
 	bool bSprintNow;
 
 public:
@@ -149,35 +145,26 @@ protected:
 	float HighJumpZVelocity;
 
 	/** AnimInstance for applying animation montages. */
-	UPROPERTY()
-	UAnimInstance* AnimInstance;
-
-	/** Sound of the cat's attacking. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Cat's State")
-	USoundBase* AttackSound;
+	TWeakObjectPtr<UAnimInstance> AnimInstance;
 
 	/** Animation Montage with the attack animation. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Cat's State")
-	UAnimMontage* AttackMontage;
+	TSoftObjectPtr<UAnimMontage> AttackMontage;
 
 	/**
 	 * Delegate for storing function that should be called
-	 * after the attack animation montage is ended.
+	 * after the Attack Animation Montage is ended.
 	 */
 	FOnMontageEnded AttackMontageEndedDelegate;
 
 	/**
-	 * Function that should be called after the attack
-	 * animation montage is ended.
+	 * Function that should be called after the Attack
+	 * Animation Montage is ended.
 	 * @param AnimMontage Animation montage that was ended.
 	 * @param bInterrupted Was the animation interrupted?
 	 */
 	UFUNCTION()
 	void OnAttackMontageEnded(UAnimMontage* AnimMontage, bool bInterrupted);
-
-	/** Sound of the receiving damage. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Cat's State")
-	USoundBase* ReceiveDamageSound;
 
 	/** Animation Montage with the attack animation. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Cat's State")
@@ -185,13 +172,13 @@ protected:
 
 	/**
 	 * Delegate for storing function that should be called
-	 * after the receive damage animation montage is ended.
+	 * after the Receive Damage Animation Montage is ended.
 	 */
 	FOnMontageEnded ReceiveDamageMontageEndedDelegate;
 
 	/**
-	 * Function that should be called after the receive
-	 * damage animation montage is ended.
+	 * Function that should be called after the Receive
+	 * Damage Animation Montage is ended.
 	 * @param AnimMontage Animation montage that was ended.
 	 * @param bInterrupted Was the animation interrupted?
 	 */
@@ -249,7 +236,7 @@ public:
 	 * Material that is applied to the character's skeletal
 	 * mesh at this moment.
 	 */
-	UPROPERTY(/*ReplicatedUsing=OnRep_ChangeCurrentColorVariable*/Replicated)
+	UPROPERTY(Replicated)
 	UMaterialInstance* CurrentColor;
 
 	//===================Buffs Variables===========================
@@ -326,60 +313,73 @@ private:
 	//=====================Buffs Functions=========================
 public:
 	/** Function for resetting all active buffs' effects. */
+	UFUNCTION()
 	void ResetAllActiveBuffs();
 
 	/**
 	 * Function for applying the double jump buff's effect
 	 * to the character.
 	 */
+	UFUNCTION()
 	void LaunchDoubleJumpBuff(const float Duration, USlateBrushAsset* Image);
 	/** Function for resetting the double jump buff's effect. */
+	UFUNCTION()
 	void ResetDoubleJumpBuff();
 
 	/**
 	 * Function for applying the high jump buff's effect to
 	 * the character.
 	 */
+	UFUNCTION()
 	void LaunchHighJumpBuff(const float Duration, USlateBrushAsset* Image);
 	/** Function for resetting the high jump buff's effect. */
+	UFUNCTION()
 	void ResetHighJumpBuff();
 
 	/**
 	 * Function for applying the decreasing speed buff's
 	 * effect to the character.
 	 */
+	UFUNCTION()
 	void LaunchSlowBuff(const float Duration, USlateBrushAsset* Image);
 	/**
 	 * Function for resetting the decreasing speed buff's
 	 * effect.
 	 */
+	UFUNCTION()
 	void ResetSlowBuff();
 
 	/**
 	 * Function for applying the increasing speed buff's
 	 * effect to the character.
 	 */
+	UFUNCTION()
 	void LaunchFastBuff(const float Duration, USlateBrushAsset* Image);
 	/**
 	 * Function for resetting the increasing speed buff's
 	 * effect.
 	 */
+	UFUNCTION()
 	void ResetFastBuff();
 
 	/**
 	 * Function for applying the shield buff's effect to the
 	 * character.
 	 */
+	UFUNCTION()
 	void LaunchShieldBuff(const float Duration, USlateBrushAsset* Image);
 	/** Function for resetting the shield buff's effect. */
+	UFUNCTION()
 	void ResetShieldBuff();
 
 	//======================Buffs Effects==========================
 
 	/** Function for spawning the shield. */
+	UFUNCTION()
 	void SpawnShield() const;
 
 	/** Function for destroying the shield. */
+	UFUNCTION()
 	void DestroyShield() const;
 
 	/**
@@ -388,6 +388,7 @@ public:
 	 * @param bShouldSlide Should the character start (true)
 	 * or stop (false) sliding?
 	 */
+	UFUNCTION()
 	void ChangeCharactersSliding(const bool bShouldSlide) const;
 
 	//=================Cat's color functions=======================
@@ -434,6 +435,7 @@ public:
 	 * @param Rate This is a normalized rate, i.e. 1.0 means
 	 * 100% of desired turn rate.
 	 */
+	UFUNCTION()
 	void TurnAtRate(const float Rate);
 
 	/**
@@ -441,14 +443,29 @@ public:
 	 * @param Rate This is a normalized rate, i.e. 1.0 means
 	 * 100% of desired turn rate.
 	 */
+	UFUNCTION()
 	void LookUpAtRate(const float Rate);
 
 	/** Function for start the character's jumping. */
+	UFUNCTION(Server, Reliable)
 	void CustomStartJumping();
+private:
+	void CustomStartJumping_Implementation();
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_CustomStartJumping();
+	void Multicast_CustomStartJumping_Implementation();
 
+public:
 	/** Function for stop the character's jumping. */
+	UFUNCTION(Server, Unreliable)
 	void CustomStopJumping();
+private:
+	void CustomStopJumping_Implementation();
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_CustomStopJumping();
+	void Multicast_CustomStopJumping_Implementation();
 
+public:
 	/**
 	 * Timer handle for checking if the player hit the ground
 	 * after jumping.
@@ -459,6 +476,7 @@ public:
 	 * Function for checking if the player hit the ground
 	 * after jumping.
 	 */
+	UFUNCTION()
 	void CheckForHittingTheGround();
 
 	/**
@@ -529,6 +547,7 @@ private:
 	 * Function for starting the turning off of the damage
 	 * post process material.
 	 */
+	UFUNCTION()
 	void TurnOffPostProcessDamageMaterial();
 
 protected:
@@ -559,6 +578,7 @@ private:
 
 public:
 	/** Function for incrementing the number of killed NPCs. */
+	UFUNCTION()
 	void NPC_WasKilled() const;
 
 	//===============FORCE IN LINE Functions=======================
@@ -568,13 +588,6 @@ public:
 
 	/** Returns FollowCamera subobject. */
 	FORCEINLINE UCameraComponent* GetFollowCamera() const { return FollowCamera; }
-
-	/**
-	 * Getter for the StartTransform variable.
-	 * @return Player's start transform.
-	 */
-	UFUNCTION()
-	FORCEINLINE FTransform GetStartTransform() const { return StartTransform; }
 
 	/**
 	 * Getter for the PlayerStateRef variable.

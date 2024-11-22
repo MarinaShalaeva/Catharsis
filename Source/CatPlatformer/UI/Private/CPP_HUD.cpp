@@ -38,11 +38,7 @@ void ACPP_HUD::BeginPlay()
 	InitializeContainerWidget();
 	InitializeLoadingScreenWidget();
 
-	/*GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Orange,
-	                                 FString::Printf(TEXT("IsValid(PlayerControllerRef) =  %hhd"),
-	                                                 IsValid(PlayerControllerRef)));*/
-
-	if (IsValid(PlayerControllerRef))
+	if (PlayerControllerRef.IsValid())
 	{
 		PlayerControllerRef->PauseChangedDelegate.BindUObject(this, &ACPP_HUD::PauseModeChanged);
 		PlayerControllerRef->CharacterWasPossessedDelegate.AddUObject(this,
@@ -56,13 +52,13 @@ void ACPP_HUD::BeginPlay()
 	LevelName.RemoveFromStart(CurrentWorld->StreamingLevelsPrefix);
 	if (LevelName.Equals(TEXT("L_MainMenu")))
 	{
-		if (IsValid(GameInstanceRef) && !GameInstanceRef->GetSaveManager()->bSaveGameObjectIsDeclared)
+		if (GameInstanceRef.IsValid() && !GameInstanceRef->GetSaveManager()->bSaveGameObjectIsDeclared)
 		{
 			InitializeChooseSaveSlotWidget();
 		}
 	}
 
-	if (IsValid(PlayerControllerRef))
+	if (PlayerControllerRef.IsValid())
 	{
 		if (IsValid(PlayerControllerRef->GetCharacterRef()))
 		{
@@ -82,7 +78,7 @@ void ACPP_HUD::BeginPlay()
 	{
 		GameInstanceRef->SetPlayingModeAsInt(0);
 	}
-	if (IsValid(GameInstanceRef) &&
+	if (GameInstanceRef.IsValid() &&
 		(GameInstanceRef->GetPlayingModeAsInt() == 3 ||
 			GameInstanceRef->GetPlayingModeAsInt() == 4))
 	{
@@ -95,7 +91,7 @@ void ACPP_HUD::BeginPlay()
 			TH_DestroyLoadingScreen,
 			[&]()
 			{
-				if (IsValid(PlayerControllerRef))
+				if (PlayerControllerRef.IsValid())
 				{
 					if (IsValid(PlayerControllerRef->GetCharacterRef()))
 					{
@@ -123,14 +119,14 @@ void ACPP_HUD::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	DestroyChooseSaveSlotWidget();
 	DestroyContainerWidget();
 
-	if (IsValid(PlayerControllerRef))
+	if (PlayerControllerRef.IsValid())
 	{
 		PlayerControllerRef->PauseChangedDelegate.Unbind();
 		PlayerControllerRef->CreateNotificationDelegate.Unbind();
 		PlayerControllerRef = nullptr;
 	}
 
-	if (IsValid(PlayerStateRef))
+	if (PlayerStateRef.IsValid())
 	{
 		PlayerStateRef->LevelWasEndedDelegate.Remove(DH_LevelWasEnded);
 		DH_LevelWasEnded.Reset();
@@ -148,8 +144,6 @@ void ACPP_HUD::EndPlay(const EEndPlayReason::Type EndPlayReason)
 
 void ACPP_HUD::NewCharacterWasPossessed_Implementation(ACPP_Character* NewCharacter)
 {
-	/*GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Black,
-	                                 FString::Printf(TEXT("NewCharacterWasPossessed()")));*/
 	ResetAllBuffsEffects();
 
 	if (IsValid(NewCharacter))
@@ -174,12 +168,10 @@ void ACPP_HUD::NewCharacterWasPossessed_Implementation(ACPP_Character* NewCharac
 
 void ACPP_HUD::PlayerStateWasChanged(ACPP_PlayerState* NewPlayerState)
 {
-	/*GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Magenta,
-	                                 FString::Printf(TEXT("PlayerStateWasChanged()")));*/
 	if (!IsValid(NewPlayerState))
 		return;
 
-	if (IsValid(PlayerStateRef))
+	if (PlayerStateRef.IsValid())
 	{
 		PlayerStateRef->LevelWasEndedDelegate.Remove(DH_LevelWasEnded);
 		DH_LevelWasEnded.Reset();
@@ -194,13 +186,9 @@ void ACPP_HUD::PlayerStateWasChanged(ACPP_PlayerState* NewPlayerState)
 	FString LevelName = CurrentWorld->GetMapName();
 	LevelName.RemoveFromStart(CurrentWorld->StreamingLevelsPrefix);
 
-	/*GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Green,
-	                                 FString::Printf(TEXT("LevelName = %s"),
-	                                                 *LevelName));*/
-
 	if (LevelName.Equals(TEXT("L_MainMenu")))
 	{
-		if (!IsValid(ChooseSaveSlot_Widget) || ChooseSaveSlot_Widget == nullptr)
+		if (!ChooseSaveSlot_Widget.IsValid() || ChooseSaveSlot_Widget == nullptr)
 		{
 			InitializeMainMenuWidget();
 		}
@@ -211,8 +199,6 @@ void ACPP_HUD::PlayerStateWasChanged(ACPP_PlayerState* NewPlayerState)
 	}
 	else
 	{
-		/*GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Green,
-		                                 FString::Printf(TEXT("InitializeLevelWidget()")));*/
 		InitializeLevelWidget();
 	}
 }
@@ -227,7 +213,7 @@ void ACPP_HUD::OnControllerConnectionChanged(EInputDeviceConnectionState NewConn
 	else if (!UCPP_StaticLibrary::IsAnyGamepadConnected())
 	{
 		CreateNewNotification(AllGamepadsWereDisconnectedInscription, 3.5f);
-		if (IsValid(PlayerControllerRef) && PlayerControllerRef->AllGamepadsWereDisconnectedDelegate.IsBound())
+		if (PlayerControllerRef.IsValid() && PlayerControllerRef->AllGamepadsWereDisconnectedDelegate.IsBound())
 		{
 			PlayerControllerRef->AllGamepadsWereDisconnectedDelegate.Broadcast();
 		}
@@ -240,23 +226,27 @@ void ACPP_HUD::OnControllerConnectionChanged(EInputDeviceConnectionState NewConn
 
 void ACPP_HUD::CreateNewNotification(const FText& NewText, const float TimeToDisplay) const
 {
-	if (IsValid(GameInstanceRef) &&
-		IsValid(PlayerControllerRef) &&
-		IsValid(Container_Widget))
+	if (GameInstanceRef.IsValid() &&
+		PlayerControllerRef.IsValid() &&
+		Container_Widget.IsValid())
 	{
 		const FName Row = FName(TEXT("Notification"));
-		if (UClass* Class = GameInstanceRef->GetWidgetClassBySoftReference(
-			UCPP_StaticWidgetLibrary::GetSoftReferenceToWidgetBlueprintByRowName(
-				WidgetBlueprintsDataTable,
-				Row)))
+		if (IsValid(WidgetBlueprintsDataTable.LoadSynchronous()))
 		{
-			if (UWCPP_Notification* NotificationWidget = CreateWidget<UWCPP_Notification>(PlayerControllerRef, Class);
-				IsValid(NotificationWidget))
+			if (UClass* Class = GameInstanceRef->GetWidgetClassBySoftReference(
+				UCPP_StaticWidgetLibrary::GetSoftReferenceToWidgetBlueprintByRowName(
+					WidgetBlueprintsDataTable.Get(),
+					Row)))
 			{
-				NotificationWidget->SetFlags(RF_StrongRefOnFrame);
-				NotificationWidget->SetClosingTime(TimeToDisplay);
-				NotificationWidget->SetNewNotificationText(NewText);
-				Container_Widget->NotificationsScrollBox->AddChild(NotificationWidget);
+				if (UWCPP_Notification* NotificationWidget = CreateWidget<UWCPP_Notification>(
+						PlayerControllerRef.Get(), Class);
+					IsValid(NotificationWidget))
+				{
+					NotificationWidget->SetFlags(RF_StrongRefOnFrame);
+					NotificationWidget->SetClosingTime(TimeToDisplay);
+					NotificationWidget->SetNewNotificationText(NewText);
+					Container_Widget->NotificationsScrollBox->AddChild(NotificationWidget);
+				}
 			}
 		}
 	}
@@ -271,8 +261,8 @@ void ACPP_HUD::PauseModeChanged(const bool bIsPaused)
 	else
 	{
 		DestroyPauseWidget();
-		if (IsValid(PlayerControllerRef) && !PlayerControllerRef->GetIsGamepadMode() &&
-			IsValid(Level_Widget) && Level_Widget->bCursorShouldBeVisible)
+		if (PlayerControllerRef.IsValid() && !PlayerControllerRef->GetIsGamepadMode() &&
+			Level_Widget.IsValid() && Level_Widget->bCursorShouldBeVisible)
 		{
 			PlayerControllerRef->ChangeCursorVisibility(true);
 		}
@@ -282,15 +272,15 @@ void ACPP_HUD::PauseModeChanged(const bool bIsPaused)
 void ACPP_HUD::BuffWasCollected(const int32 BuffTypeId, USlateBrushAsset* BuffImage,
                                 const float EffectDuration) const
 {
-	if (IsValid(Level_Widget))
+	if (Level_Widget.IsValid())
 	{
-		Level_Widget->CreateOrUpdateBuffWidget(PlayerControllerRef, BuffTypeId, BuffImage, EffectDuration);
+		Level_Widget->CreateOrUpdateBuffWidget(PlayerControllerRef.Get(), BuffTypeId, BuffImage, EffectDuration);
 	}
 }
 
 void ACPP_HUD::ShouldResetBuffEffect(const int32 BuffTypeId) const
 {
-	if (IsValid(Level_Widget))
+	if (Level_Widget.IsValid())
 	{
 		Level_Widget->DestroyBuffWidget(BuffTypeId);
 	}
@@ -298,7 +288,7 @@ void ACPP_HUD::ShouldResetBuffEffect(const int32 BuffTypeId) const
 
 void ACPP_HUD::ResetAllBuffsEffects() const
 {
-	if (IsValid(Level_Widget))
+	if (Level_Widget.IsValid())
 	{
 		Level_Widget->DestroyAllBuffsWidgets();
 	}
@@ -306,21 +296,24 @@ void ACPP_HUD::ResetAllBuffsEffects() const
 
 void ACPP_HUD::InitializeContainerWidget()
 {
-	if (IsValid(GameInstanceRef) &&
-		IsValid(PlayerControllerRef) &&
+	if (GameInstanceRef.IsValid() &&
+		PlayerControllerRef.IsValid() &&
 		Container_Widget == nullptr)
 	{
 		const FName Row = FName(TEXT("Container"));
-		if (UClass* Class = GameInstanceRef->GetWidgetClassBySoftReference(
-			UCPP_StaticWidgetLibrary::GetSoftReferenceToWidgetBlueprintByRowName(
-				WidgetBlueprintsDataTable,
-				Row)))
+		if (IsValid(WidgetBlueprintsDataTable.LoadSynchronous()))
 		{
-			Container_Widget = CreateWidget<UWCPP_Container>(PlayerControllerRef, Class);
-			if (IsValid(Container_Widget))
+			if (UClass* Class = GameInstanceRef->GetWidgetClassBySoftReference(
+				UCPP_StaticWidgetLibrary::GetSoftReferenceToWidgetBlueprintByRowName(
+					WidgetBlueprintsDataTable.Get(),
+					Row)))
 			{
-				Container_Widget->SetFlags(RF_StrongRefOnFrame);
-				Container_Widget->AddToPlayerScreen();
+				Container_Widget = CreateWidget<UWCPP_Container>(PlayerControllerRef.Get(), Class);
+				if (Container_Widget.IsValid())
+				{
+					Container_Widget->SetFlags(RF_StrongRefOnFrame);
+					Container_Widget->AddToPlayerScreen();
+				}
 			}
 		}
 	}
@@ -328,7 +321,7 @@ void ACPP_HUD::InitializeContainerWidget()
 
 void ACPP_HUD::DestroyContainerWidget()
 {
-	if (IsValid(Container_Widget))
+	if (Container_Widget.IsValid())
 	{
 		Container_Widget->RemoveFromParent();
 		Container_Widget = nullptr;
@@ -337,64 +330,71 @@ void ACPP_HUD::DestroyContainerWidget()
 
 void ACPP_HUD::InitializeMainMenuWidget()
 {
-	if (IsValid(Container_Widget))
+	if (Container_Widget.IsValid())
 	{
 		Container_Widget->BackgroundImage->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
 	}
 	DestroyLoadingScreenWidget(false);
 	DestroyChooseSaveSlotWidget();
 
-	if (IsValid(GameInstanceRef) &&
-		IsValid(PlayerControllerRef) &&
+	if (GameInstanceRef.IsValid() &&
+		PlayerControllerRef.IsValid() &&
 		MainMenu_Widget == nullptr)
 	{
 		const FName Row = FName(TEXT("MainMenu"));
-		if (UClass* Class = GameInstanceRef->GetWidgetClassBySoftReference(
-			UCPP_StaticWidgetLibrary::GetSoftReferenceToWidgetBlueprintByRowName(
-				WidgetBlueprintsDataTable,
-				Row)))
+		if (IsValid(WidgetBlueprintsDataTable.LoadSynchronous()))
 		{
-			MainMenu_Widget = CreateWidget<UWCPP_MainMenu>(PlayerControllerRef, Class);
-			if (IsValid(MainMenu_Widget) && IsValid(Container_Widget))
+			if (UClass* Class = GameInstanceRef->GetWidgetClassBySoftReference(
+				UCPP_StaticWidgetLibrary::GetSoftReferenceToWidgetBlueprintByRowName(
+					WidgetBlueprintsDataTable.Get(),
+					Row)))
 			{
-				MainMenu_Widget->SetFlags(RF_StrongRefOnFrame);
-				MainMenu_Widget->SetGameInstanceRef(GameInstanceRef);
-				MainMenu_Widget->SetPlayerControllerRef(PlayerControllerRef);
-				MainMenu_Widget->ShouldOpenSaveSlotsPanelDelegate.BindUObject(
-					this, &ACPP_HUD::InitializeChooseSaveSlotWidget);
-				if (PlayerControllerRef->GetSoundManagerRef() == nullptr)
+				MainMenu_Widget = CreateWidget<UWCPP_MainMenu>(PlayerControllerRef.Get(), Class);
+				if (MainMenu_Widget.IsValid() && Container_Widget.IsValid())
 				{
-					if (UClass* SoundManagerClass = GameInstanceRef->GetActorClassBySoftReference(
-						UCPP_StaticWidgetLibrary::GetSoftReferenceToSoundManagerByRowName(
-							SoundManagersDataTable,
-							FName(TEXT("MainMenuSoundManager")))))
+					MainMenu_Widget->SetFlags(RF_StrongRefOnFrame);
+					MainMenu_Widget->SetGameInstanceRef(GameInstanceRef.Get());
+					MainMenu_Widget->SetPlayerControllerRef(PlayerControllerRef.Get());
+					MainMenu_Widget->ShouldOpenSaveSlotsPanelDelegate.BindUObject(
+						this, &ACPP_HUD::InitializeChooseSaveSlotWidget);
+					if (PlayerControllerRef->GetSoundManagerRef() == nullptr)
 					{
-						ACPP_SoundManager* TmpSoundManager = GetWorld()->SpawnActorDeferred<ACPP_SoundManager>(
-							SoundManagerClass,
-							FTransform::Identity,
-							nullptr,
-							nullptr,
-							ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
-
-						if (IsValid(TmpSoundManager))
+						if (IsValid(SoundManagersDataTable.LoadSynchronous()))
 						{
-							TmpSoundManager->SetPlayerControllerRef(PlayerControllerRef);
-							bool bSetDefaultValues = true;
-							if (IsValid(PlayerControllerRef->GetCharacter()) &&
-								IsValid(PlayerControllerRef->GetCharacter()->GetPlayerState<ACPP_PlayerState>()))
+							if (UClass* SoundManagerClass = GameInstanceRef->GetActorClassBySoftReference(
+								UCPP_StaticWidgetLibrary::GetSoftReferenceToSoundManagerByRowName(
+									SoundManagersDataTable.Get(),
+									FName(TEXT("MainMenuSoundManager")))))
 							{
-								bSetDefaultValues = !PlayerControllerRef->GetCharacter()->
-								                                          GetPlayerState<ACPP_PlayerState>()->
-								                                          GetSaveFileWasCreated();
+								ACPP_SoundManager* TmpSoundManager = GetWorld()->SpawnActorDeferred<ACPP_SoundManager>(
+									SoundManagerClass,
+									FTransform::Identity,
+									nullptr,
+									nullptr,
+									ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
+
+								if (IsValid(TmpSoundManager))
+								{
+									TmpSoundManager->SetPlayerControllerRef(PlayerControllerRef.Get());
+									bool bSetDefaultValues = true;
+									if (IsValid(PlayerControllerRef->GetCharacter()) &&
+										IsValid(
+											PlayerControllerRef->GetCharacter()->GetPlayerState<ACPP_PlayerState>()))
+									{
+										bSetDefaultValues = !PlayerControllerRef->GetCharacter()->
+											GetPlayerState<ACPP_PlayerState>()->
+											GetSaveFileWasCreated();
+									}
+									TmpSoundManager->ApplySettingsFromTheSaveFile(bSetDefaultValues, false);
+									PlayerControllerRef->SetSoundManagerRef(TmpSoundManager);
+									UGameplayStatics::FinishSpawningActor(TmpSoundManager, FTransform());
+								}
 							}
-							TmpSoundManager->ApplySettingsFromTheSaveFile(bSetDefaultValues, false);
-							PlayerControllerRef->SetSoundManagerRef(TmpSoundManager);
-							UGameplayStatics::FinishSpawningActor(TmpSoundManager, FTransform());
 						}
 					}
+					DestroyPauseWidget();
+					Container_Widget->MainMenuAndPauseWidgetSizeBox->AddChild(MainMenu_Widget.Get());
 				}
-				DestroyPauseWidget();
-				Container_Widget->MainMenuAndPauseWidgetSizeBox->AddChild(MainMenu_Widget);
 			}
 		}
 	}
@@ -402,13 +402,13 @@ void ACPP_HUD::InitializeMainMenuWidget()
 
 void ACPP_HUD::DestroyMainMenuWidget()
 {
-	if (IsValid(MainMenu_Widget))
+	if (MainMenu_Widget.IsValid())
 	{
 		MainMenu_Widget->ShouldOpenSaveSlotsPanelDelegate.Unbind();
 		MainMenu_Widget->RemoveFromParent();
 		MainMenu_Widget = nullptr;
 
-		if (IsValid(PlayerControllerRef))
+		if (PlayerControllerRef.IsValid())
 		{
 			ACPP_SoundManager* SoundManager = PlayerControllerRef->GetSoundManagerRef();
 			PlayerControllerRef->SetSoundManagerRef(nullptr);
@@ -422,32 +422,35 @@ void ACPP_HUD::DestroyMainMenuWidget()
 
 void ACPP_HUD::InitializeChooseSaveSlotWidget()
 {
-	if (IsValid(Container_Widget))
+	if (Container_Widget.IsValid())
 	{
 		Container_Widget->BackgroundImage->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
 	}
 	DestroyLoadingScreenWidget(false);
 	DestroyMainMenuWidget();
 
-	if (IsValid(GameInstanceRef) &&
-		IsValid(PlayerControllerRef) &&
+	if (GameInstanceRef.IsValid() &&
+		PlayerControllerRef.IsValid() &&
 		ChooseSaveSlot_Widget == nullptr)
 	{
 		const FName Row = FName(TEXT("ChooseSave"));
-		if (UClass* Class = GameInstanceRef->GetWidgetClassBySoftReference(
-			UCPP_StaticWidgetLibrary::GetSoftReferenceToWidgetBlueprintByRowName(
-				WidgetBlueprintsDataTable,
-				Row)))
+		if (IsValid(WidgetBlueprintsDataTable.LoadSynchronous()))
 		{
-			ChooseSaveSlot_Widget = CreateWidget<UWCPP_ChooseSaveSlot>(PlayerControllerRef, Class);
-			if (IsValid(ChooseSaveSlot_Widget) && IsValid(Container_Widget))
+			if (UClass* Class = GameInstanceRef->GetWidgetClassBySoftReference(
+				UCPP_StaticWidgetLibrary::GetSoftReferenceToWidgetBlueprintByRowName(
+					WidgetBlueprintsDataTable.Get(),
+					Row)))
 			{
-				ChooseSaveSlot_Widget->SetFlags(RF_StrongRefOnFrame);
-				ChooseSaveSlot_Widget->SetGameInstanceRef(GameInstanceRef);
-				ChooseSaveSlot_Widget->SetPlayerControllerRef(PlayerControllerRef);
-				ChooseSaveSlot_Widget->ShouldOpenMainMenuDelegate.
-				                       BindUObject(this, &ACPP_HUD::InitializeMainMenuWidget);
-				Container_Widget->MainMenuAndPauseWidgetSizeBox->AddChild(ChooseSaveSlot_Widget);
+				ChooseSaveSlot_Widget = CreateWidget<UWCPP_ChooseSaveSlot>(PlayerControllerRef.Get(), Class);
+				if (ChooseSaveSlot_Widget.IsValid() && Container_Widget.IsValid())
+				{
+					ChooseSaveSlot_Widget->SetFlags(RF_StrongRefOnFrame);
+					ChooseSaveSlot_Widget->SetGameInstanceRef(GameInstanceRef.Get());
+					ChooseSaveSlot_Widget->SetPlayerControllerRef(PlayerControllerRef.Get());
+					ChooseSaveSlot_Widget->ShouldOpenMainMenuDelegate.
+					                       BindUObject(this, &ACPP_HUD::InitializeMainMenuWidget);
+					Container_Widget->MainMenuAndPauseWidgetSizeBox->AddChild(ChooseSaveSlot_Widget.Get());
+				}
 			}
 		}
 	}
@@ -455,7 +458,7 @@ void ACPP_HUD::InitializeChooseSaveSlotWidget()
 
 void ACPP_HUD::DestroyChooseSaveSlotWidget()
 {
-	if (IsValid(ChooseSaveSlot_Widget))
+	if (ChooseSaveSlot_Widget.IsValid())
 	{
 		ChooseSaveSlot_Widget->ShouldOpenMainMenuDelegate.Unbind();
 		ChooseSaveSlot_Widget->RemoveFromParent();
@@ -465,43 +468,46 @@ void ACPP_HUD::DestroyChooseSaveSlotWidget()
 
 void ACPP_HUD::InitializePauseWidget()
 {
-	if (IsValid(MainMenu_Widget))
+	if (MainMenu_Widget.IsValid())
 		return;
 
-	if (IsValid(Container_Widget))
+	if (Container_Widget.IsValid())
 	{
 		Container_Widget->BackgroundImage->SetVisibility(ESlateVisibility::Collapsed);
 	}
 
-	if (IsValid(Level_Widget))
+	if (Level_Widget.IsValid())
 	{
 		Level_Widget->bIsWidgetActive = false;
 	}
 
-	if (IsValid(GameInstanceRef) &&
-		IsValid(PlayerControllerRef) &&
+	if (GameInstanceRef.IsValid() &&
+		PlayerControllerRef.IsValid() &&
 		Pause_Widget == nullptr)
 	{
 		const FName Row = FName(TEXT("Pause"));
-		if (UClass* Class = GameInstanceRef->GetWidgetClassBySoftReference(
-			UCPP_StaticWidgetLibrary::GetSoftReferenceToWidgetBlueprintByRowName(
-				WidgetBlueprintsDataTable,
-				Row)))
+		if (IsValid(WidgetBlueprintsDataTable.LoadSynchronous()))
 		{
-			Pause_Widget = CreateWidget<UWCPP_WidgetParent>(PlayerControllerRef, Class);
-			if (IsValid(Pause_Widget) && IsValid(Container_Widget))
+			if (UClass* Class = GameInstanceRef->GetWidgetClassBySoftReference(
+				UCPP_StaticWidgetLibrary::GetSoftReferenceToWidgetBlueprintByRowName(
+					WidgetBlueprintsDataTable.Get(),
+					Row)))
 			{
-				Pause_Widget->SetFlags(RF_StrongRefOnFrame);
-				Pause_Widget->SetGameInstanceRef(GameInstanceRef);
-				Pause_Widget->SetPlayerControllerRef(PlayerControllerRef);
-				if (GameInstanceRef->GetPlayingModeAsInt() == 1)
+				Pause_Widget = CreateWidget<UWCPP_WidgetParent>(PlayerControllerRef.Get(), Class);
+				if (Pause_Widget.IsValid() && Container_Widget.IsValid())
 				{
-					Pause_Widget->SetOwningPlayer(PlayerControllerRef);
-					Pause_Widget->AddToViewport(0);
-				}
-				else
-				{
-					Container_Widget->MainMenuAndPauseWidgetSizeBox->AddChild(Pause_Widget);
+					Pause_Widget->SetFlags(RF_StrongRefOnFrame);
+					Pause_Widget->SetGameInstanceRef(GameInstanceRef.Get());
+					Pause_Widget->SetPlayerControllerRef(PlayerControllerRef.Get());
+					if (GameInstanceRef->GetPlayingModeAsInt() == 1)
+					{
+						Pause_Widget->SetOwningPlayer(PlayerControllerRef.Get());
+						Pause_Widget->AddToViewport(0);
+					}
+					else
+					{
+						Container_Widget->MainMenuAndPauseWidgetSizeBox->AddChild(Pause_Widget.Get());
+					}
 				}
 			}
 		}
@@ -510,12 +516,12 @@ void ACPP_HUD::InitializePauseWidget()
 
 void ACPP_HUD::DestroyPauseWidget()
 {
-	if (IsValid(Level_Widget))
+	if (Level_Widget.IsValid())
 	{
 		Level_Widget->bIsWidgetActive = true;
 	}
 
-	if (IsValid(Pause_Widget))
+	if (Pause_Widget.IsValid())
 	{
 		Pause_Widget->RemoveFromParent();
 		Pause_Widget = nullptr;
@@ -524,27 +530,30 @@ void ACPP_HUD::DestroyPauseWidget()
 
 void ACPP_HUD::InitializeLoadingScreenWidget()
 {
-	if (IsValid(GameInstanceRef) &&
-		IsValid(PlayerControllerRef) &&
+	if (GameInstanceRef.IsValid() &&
+		PlayerControllerRef.IsValid() &&
 		LoadingScreen_Widget == nullptr)
 	{
 		const FName Row = FName(TEXT("Loading"));
-		if (UClass* Class = GameInstanceRef->GetWidgetClassBySoftReference(
-			UCPP_StaticWidgetLibrary::GetSoftReferenceToWidgetBlueprintByRowName(
-				WidgetBlueprintsDataTable,
-				Row)))
+		if (IsValid(WidgetBlueprintsDataTable.LoadSynchronous()))
 		{
-			LoadingScreen_Widget = CreateWidget<UWCPP_WidgetParent>(PlayerControllerRef, Class);
-			if (IsValid(LoadingScreen_Widget))
+			if (UClass* Class = GameInstanceRef->GetWidgetClassBySoftReference(
+				UCPP_StaticWidgetLibrary::GetSoftReferenceToWidgetBlueprintByRowName(
+					WidgetBlueprintsDataTable.Get(),
+					Row)))
 			{
-				LoadingScreen_Widget->SetFlags(RF_StrongRefOnFrame);
-				if (GameInstanceRef->GetPlayingModeAsInt() == 1)
+				LoadingScreen_Widget = CreateWidget<UWCPP_WidgetParent>(PlayerControllerRef.Get(), Class);
+				if (LoadingScreen_Widget.IsValid())
 				{
-					LoadingScreen_Widget->AddToViewport(10);
-				}
-				else if (IsValid(Container_Widget))
-				{
-					Container_Widget->LoadingWidgetSizeBox->AddChild(LoadingScreen_Widget);
+					LoadingScreen_Widget->SetFlags(RF_StrongRefOnFrame);
+					if (GameInstanceRef->GetPlayingModeAsInt() == 1)
+					{
+						LoadingScreen_Widget->AddToViewport(10);
+					}
+					else if (Container_Widget.IsValid())
+					{
+						Container_Widget->LoadingWidgetSizeBox->AddChild(LoadingScreen_Widget.Get());
+					}
 				}
 			}
 		}
@@ -558,15 +567,15 @@ void ACPP_HUD::DestroyLoadingScreenWidget(const bool bShouldHideBackgroundImage)
 	{
 		GetWorld()->GetTimerManager().ClearTimer(TH_DestroyLoadingScreen);
 	}
-	if (bShouldHideBackgroundImage && IsValid(Container_Widget))
+	if (bShouldHideBackgroundImage && Container_Widget.IsValid())
 	{
 		Container_Widget->BackgroundImage->SetVisibility(ESlateVisibility::Collapsed);
 	}
-	if (IsValid(PlayerControllerRef))
+	if (PlayerControllerRef.IsValid())
 	{
 		PlayerControllerRef->bCanBePaused = true;
 	}
-	if (IsValid(LoadingScreen_Widget))
+	if (LoadingScreen_Widget.IsValid())
 	{
 		LoadingScreen_Widget->RemoveFromParent();
 		LoadingScreen_Widget = nullptr;
@@ -575,59 +584,66 @@ void ACPP_HUD::DestroyLoadingScreenWidget(const bool bShouldHideBackgroundImage)
 
 void ACPP_HUD::InitializeLevelWidget()
 {
-	if (IsValid(GameInstanceRef) &&
-		IsValid(PlayerControllerRef) &&
+	if (GameInstanceRef.IsValid() &&
+		PlayerControllerRef.IsValid() &&
 		Level_Widget == nullptr)
 	{
 		const FName Row = FName(TEXT("Level"));
-		if (UClass* Class = GameInstanceRef->GetWidgetClassBySoftReference(
-			UCPP_StaticWidgetLibrary::GetSoftReferenceToWidgetBlueprintByRowName(
-				WidgetBlueprintsDataTable,
-				Row)))
+		if (IsValid(WidgetBlueprintsDataTable.LoadSynchronous()))
 		{
-			Level_Widget = CreateWidget<UWCPP_Level>(PlayerControllerRef, Class);
-			if (IsValid(Level_Widget) && IsValid(Container_Widget))
+			if (UClass* Class = GameInstanceRef->GetWidgetClassBySoftReference(
+				UCPP_StaticWidgetLibrary::GetSoftReferenceToWidgetBlueprintByRowName(
+					WidgetBlueprintsDataTable.Get(),
+					Row)))
 			{
-				Level_Widget->SetFlags(RF_StrongRefOnFrame);
-				if (GameInstanceRef->GetPlayingModeAsInt() == 3 ||
-					GameInstanceRef->GetPlayingModeAsInt() == 4)
+				Level_Widget = CreateWidget<UWCPP_Level>(PlayerControllerRef.Get(), Class);
+				if (Level_Widget.IsValid() && Container_Widget.IsValid())
 				{
-					DestroyLoadingScreenWidget(true);
-				}
-				Level_Widget->SetGameInstanceRef(GameInstanceRef);
-				Level_Widget->SetPlayerControllerRef(PlayerControllerRef);
-				if (PlayerControllerRef->GetSoundManagerRef() == nullptr)
-				{
-					if (UClass* SoundManagerClass = GameInstanceRef->GetActorClassBySoftReference(
-						UCPP_StaticWidgetLibrary::GetSoftReferenceToSoundManagerByRowName(
-							SoundManagersDataTable,
-							FName(TEXT("LevelSoundManager")))))
+					Level_Widget->SetFlags(RF_StrongRefOnFrame);
+					if (GameInstanceRef->GetPlayingModeAsInt() == 3 ||
+						GameInstanceRef->GetPlayingModeAsInt() == 4)
 					{
-						ACPP_SoundManager* TmpSoundManager = GetWorld()->SpawnActorDeferred<ACPP_SoundManager>(
-							SoundManagerClass,
-							FTransform::Identity,
-							nullptr,
-							nullptr,
-							ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
-
-						if (IsValid(TmpSoundManager))
+						DestroyLoadingScreenWidget(true);
+					}
+					Level_Widget->SetGameInstanceRef(GameInstanceRef.Get());
+					Level_Widget->SetPlayerControllerRef(PlayerControllerRef.Get());
+					if (PlayerControllerRef->GetSoundManagerRef() == nullptr)
+					{
+						if (IsValid(SoundManagersDataTable.LoadSynchronous()))
 						{
-							TmpSoundManager->SetPlayerControllerRef(PlayerControllerRef);
-							bool bSetDefaultValues = true;
-							if (IsValid(PlayerControllerRef->GetCharacter()) &&
-								IsValid(PlayerControllerRef->GetCharacter()->GetPlayerState<ACPP_PlayerState>()))
+							if (UClass* SoundManagerClass = GameInstanceRef->GetActorClassBySoftReference(
+								UCPP_StaticWidgetLibrary::GetSoftReferenceToSoundManagerByRowName(
+									SoundManagersDataTable.Get(),
+									FName(TEXT("LevelSoundManager")))))
 							{
-								bSetDefaultValues = !PlayerControllerRef->GetCharacter()->
-								                                          GetPlayerState<ACPP_PlayerState>()->
-								                                          GetSaveFileWasCreated();
+								ACPP_SoundManager* TmpSoundManager = GetWorld()->SpawnActorDeferred<ACPP_SoundManager>(
+									SoundManagerClass,
+									FTransform::Identity,
+									nullptr,
+									nullptr,
+									ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
+
+								if (IsValid(TmpSoundManager))
+								{
+									TmpSoundManager->SetPlayerControllerRef(PlayerControllerRef.Get());
+									bool bSetDefaultValues = true;
+									if (IsValid(PlayerControllerRef->GetCharacter()) &&
+										IsValid(
+											PlayerControllerRef->GetCharacter()->GetPlayerState<ACPP_PlayerState>()))
+									{
+										bSetDefaultValues = !PlayerControllerRef->GetCharacter()->
+											GetPlayerState<ACPP_PlayerState>()->
+											GetSaveFileWasCreated();
+									}
+									TmpSoundManager->ApplySettingsFromTheSaveFile(bSetDefaultValues, false);
+									PlayerControllerRef->SetSoundManagerRef(TmpSoundManager);
+									UGameplayStatics::FinishSpawningActor(TmpSoundManager, FTransform());
+								}
 							}
-							TmpSoundManager->ApplySettingsFromTheSaveFile(bSetDefaultValues, false);
-							PlayerControllerRef->SetSoundManagerRef(TmpSoundManager);
-							UGameplayStatics::FinishSpawningActor(TmpSoundManager, FTransform());
 						}
 					}
+					Container_Widget->LevelWidgetSizeBox->AddChild(Level_Widget.Get());
 				}
-				Container_Widget->LevelWidgetSizeBox->AddChild(Level_Widget);
 			}
 		}
 	}
@@ -635,7 +651,7 @@ void ACPP_HUD::InitializeLevelWidget()
 
 void ACPP_HUD::DestroyLevelWidget()
 {
-	if (IsValid(Level_Widget))
+	if (Level_Widget.IsValid())
 	{
 		Level_Widget->RemoveFromParent();
 		Level_Widget = nullptr;
@@ -650,26 +666,29 @@ void ACPP_HUD::LevelWasEnded(const bool bIsWinner)
 
 void ACPP_HUD::InitializeEndLevelWidget(const bool bIsWinner)
 {
-	if (IsValid(GameInstanceRef) &&
-		IsValid(PlayerControllerRef) &&
+	if (GameInstanceRef.IsValid() &&
+		PlayerControllerRef.IsValid() &&
 		EndLevel_Widget == nullptr)
 	{
 		const FName Row = FName(TEXT("EndLevel"));
-		if (UClass* Class = GameInstanceRef->GetWidgetClassBySoftReference(
-			UCPP_StaticWidgetLibrary::GetSoftReferenceToWidgetBlueprintByRowName(
-				WidgetBlueprintsDataTable,
-				Row)))
+		if (IsValid(WidgetBlueprintsDataTable.LoadSynchronous()))
 		{
-			EndLevel_Widget = CreateWidget<UWCPP_EndLevel>(PlayerControllerRef, Class);
-			if (IsValid(EndLevel_Widget) && IsValid(Container_Widget))
+			if (UClass* Class = GameInstanceRef->GetWidgetClassBySoftReference(
+				UCPP_StaticWidgetLibrary::GetSoftReferenceToWidgetBlueprintByRowName(
+					WidgetBlueprintsDataTable.Get(),
+					Row)))
 			{
-				EndLevel_Widget->SetFlags(RF_StrongRefOnFrame);
-				PlayerControllerRef->ChangeInputEnabling(false);
-				PlayerControllerRef->ChangeCursorVisibility(true);
-				EndLevel_Widget->SetPlayerControllerRef(PlayerControllerRef);
-				EndLevel_Widget->SetGameInstanceRef(GameInstanceRef);
-				EndLevel_Widget->SetIsWinner(bIsWinner);
-				Container_Widget->LevelWidgetSizeBox->AddChild(EndLevel_Widget);
+				EndLevel_Widget = CreateWidget<UWCPP_EndLevel>(PlayerControllerRef.Get(), Class);
+				if (EndLevel_Widget.IsValid() && Container_Widget.IsValid())
+				{
+					EndLevel_Widget->SetFlags(RF_StrongRefOnFrame);
+					PlayerControllerRef->ChangeInputEnabling(false);
+					PlayerControllerRef->ChangeCursorVisibility(true);
+					EndLevel_Widget->SetPlayerControllerRef(PlayerControllerRef.Get());
+					EndLevel_Widget->SetGameInstanceRef(GameInstanceRef.Get());
+					EndLevel_Widget->SetIsWinner(bIsWinner);
+					Container_Widget->LevelWidgetSizeBox->AddChild(EndLevel_Widget.Get());
+				}
 			}
 		}
 	}
@@ -677,7 +696,7 @@ void ACPP_HUD::InitializeEndLevelWidget(const bool bIsWinner)
 
 void ACPP_HUD::DestroyEndLevelWidget()
 {
-	if (IsValid(EndLevel_Widget))
+	if (EndLevel_Widget.IsValid())
 	{
 		EndLevel_Widget->RemoveFromParent();
 		EndLevel_Widget = nullptr;
@@ -686,7 +705,7 @@ void ACPP_HUD::DestroyEndLevelWidget()
 
 void ACPP_HUD::StartPause()
 {
-	if (IsValid(MainMenu_Widget) || IsValid(EndLevel_Widget))
+	if (MainMenu_Widget.IsValid() || EndLevel_Widget.IsValid())
 		return;
 
 	InitializePauseWidget();

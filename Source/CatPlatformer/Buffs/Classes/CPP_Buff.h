@@ -44,11 +44,11 @@ protected:
 	 */
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
-	/**
-	 * Returns the properties used for network replication.
-	 * @param OutLifetimeProps Lifetime properties.
+	/** 
+	 * Function that is called every frame.
+	 * Is needed for updating platform's location.
 	 */
-	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+	virtual void Tick(float DeltaSeconds) override;
 
 public:
 	/**
@@ -147,10 +147,6 @@ public:
 	int32 ScoreToAdd;
 
 	//===========Rotating the actor around its axis================
-private:
-	/** Timer Handle for the actor's rotation. */
-	FTimerHandle TH_BuffRotation;
-
 protected:
 	/** The actor's rotation speed. */
 	UPROPERTY(EditAnywhere, Category = "Buff Rotation", meta = (AllowPrivateAccess = true))
@@ -162,7 +158,7 @@ private:
 	 * Will be called by a looped timer.
 	 */
 	UFUNCTION()
-	void RotateBuffAroundItsAxis();
+	void RotateBuffAroundItsAxis(const float DeltaSeconds);
 
 	//=========Timeline for vertical actor's position==============
 public:
@@ -200,14 +196,14 @@ private:
 	 * The start actor's location for playing the animation
 	 * of the smooth movement up and down.
 	 */
-	UPROPERTY(Replicated)
+	UPROPERTY()
 	FVector StartPosition;
 
 	/**
 	 * The end actor's location for playing the animation of
 	 * the smooth movement up and down.
 	 */
-	UPROPERTY(Replicated)
+	UPROPERTY()
 	FVector EndPosition;
 
 	/**
@@ -229,7 +225,7 @@ private:
 	 * Function for the interpolation of the actor's smooth
 	 * movement up and down.
 	 */
-	UFUNCTION(Unreliable, NetMulticast)
+	UFUNCTION(NetMulticast, Unreliable)
 	void SmoothZMovementTimelineProgress(float Value);
 	void SmoothZMovementTimelineProgress_Implementation(float Value);
 

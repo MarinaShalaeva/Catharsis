@@ -17,4 +17,3 @@ void ACPP_HighJumpBuff::Multicast_CollectBuff_Implementation(ACPP_Character* Cha
 	}
 	Super::Multicast_CollectBuff_Implementation(Character);
 }
-	

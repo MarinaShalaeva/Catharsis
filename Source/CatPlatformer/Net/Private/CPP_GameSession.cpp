@@ -21,7 +21,7 @@ void ACPP_GameSession::BeginPlay()
 	Super::BeginPlay();
 
 	GameInstanceRef = Cast<UCPP_GameInstance>(GetGameInstance());
-	if (IsValid(GameInstanceRef))
+	if (GameInstanceRef.IsValid())
 	{
 		GameInstanceRef->CloseLastOpenedSessionDelegate.BindUObject(
 			this, &ACPP_GameSession::CloseLastOpenedSessionIfItStillExists);
@@ -39,7 +39,7 @@ void ACPP_GameSession::BeginPlay()
 	}
 
 	GameModeRef = Cast<ACPP_GameMode>(GetWorld()->GetAuthGameMode());
-	if (IsValid(GameModeRef))
+	if (GameModeRef.IsValid())
 	{
 		GameModeRef->StartTravelDelegate.BindUObject(this, &ACPP_GameSession::StartTravel);
 		GameModeRef->CallRegisterAllExistingPlayersDelegate.BindUObject(
@@ -65,7 +65,7 @@ void ACPP_GameSession::BeginPlay()
 
 void ACPP_GameSession::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-	if (IsValid(GameInstanceRef))
+	if (GameInstanceRef.IsValid())
 	{
 		GameInstanceRef->CloseLastOpenedSessionDelegate.Unbind();
 		GameInstanceRef->GetEOSAccountNameDelegate.Unbind();
@@ -124,7 +124,7 @@ void ACPP_GameSession::EndPlay(const EEndPlayReason::Type EndPlayReason)
 		OnUnregisterPlayersCompleteDelegate.Unbind();
 	}
 
-	if (IsValid(GameModeRef))
+	if (GameModeRef.IsValid())
 	{
 		GameModeRef->StartTravelDelegate.Unbind();
 		GameModeRef->CallRegisterAllExistingPlayersDelegate.Unbind();
@@ -214,7 +214,7 @@ void ACPP_GameSession::OnLoginCompleteCustom(int32 InLocalUserNum, bool bWasSucc
 	IdentityPtr->ClearOnLoginCompleteDelegate_Handle(0, DH_OnLoginComplete);
 	DH_OnLoginComplete.Reset();
 
-	if (IsValid(GameInstanceRef) && GameInstanceRef->LoginEndedDelegate.IsBound())
+	if (GameInstanceRef.IsValid() && GameInstanceRef->LoginEndedDelegate.IsBound())
 	{
 		if (bWasSuccessful)
 		{
@@ -229,7 +229,7 @@ void ACPP_GameSession::OnLoginCompleteCustom(int32 InLocalUserNum, bool bWasSucc
 
 void ACPP_GameSession::CloseLastOpenedSessionIfItStillExists()
 {
-	if (!IsValid(GameInstanceRef))
+	if (!GameInstanceRef.IsValid())
 		return;
 
 	// Getting the online subsystem.
@@ -326,7 +326,7 @@ void ACPP_GameSession::CreateSession(const FString& PlayerName, bool bPublicServ
 	}
 
 	SessionName = UserSessionName;
-	if (IsValid(GameInstanceRef))
+	if (GameInstanceRef.IsValid())
 	{
 		GameInstanceRef->SetCurrentSessionName(SessionName.ToString());
 		GameInstanceRef->SetCurrentRoomNumber(GUID.A);
@@ -362,7 +362,7 @@ void ACPP_GameSession::OnCreateSessionComplete(FName InSessionName, bool bWasSuc
 	}
 	else
 	{
-		if (IsValid(GameInstanceRef))
+		if (GameInstanceRef.IsValid())
 		{
 			if (GameInstanceRef->SessionCreationFailedDelegate.IsBound())
 			{
@@ -390,11 +390,11 @@ void ACPP_GameSession::OnStartOnlineGameComplete(FName InSessionName, bool bWasS
 
 	if (bWasSuccessful)
 	{
-		if (IsValid(GameModeRef))
+		if (GameModeRef.IsValid())
 		{
 			RegisterExistingPlayers(GameModeRef->GetWorld());
 		}
-		if (IsValid(GameInstanceRef))
+		if (GameInstanceRef.IsValid())
 		{
 			SessionName = InSessionName;
 			GameInstanceRef->SetCurrentSessionName(InSessionName.ToString());
@@ -411,7 +411,7 @@ void ACPP_GameSession::FindSessions(FUniqueNetIdRepl UserId, bool bIsLAN)
 	const IOnlineSubsystem* OnlineSub = IOnlineSubsystem::Get();
 	if (!OnlineSub)
 	{
-		if (IsValid(GameInstanceRef) && GameInstanceRef->FindingSessionsCompletedDelegate.IsBound())
+		if (GameInstanceRef.IsValid() && GameInstanceRef->FindingSessionsCompletedDelegate.IsBound())
 		{
 			GameInstanceRef->FindingSessionsCompletedDelegate.Broadcast(nullptr);
 		}
@@ -422,7 +422,7 @@ void ACPP_GameSession::FindSessions(FUniqueNetIdRepl UserId, bool bIsLAN)
 	const IOnlineSessionPtr Sessions = OnlineSub->GetSessionInterface();
 	if (!Sessions.IsValid())
 	{
-		if (IsValid(GameInstanceRef) && GameInstanceRef->FindingSessionsCompletedDelegate.IsBound())
+		if (GameInstanceRef.IsValid() && GameInstanceRef->FindingSessionsCompletedDelegate.IsBound())
 		{
 			GameInstanceRef->FindingSessionsCompletedDelegate.Broadcast(nullptr);
 		}
@@ -536,7 +536,7 @@ bool ACPP_GameSession::FindPrivateSession(FUniqueNetIdRepl LocalUserId, const FS
 	const IOnlineSubsystem* OnlineSub = IOnlineSubsystem::Get();
 	if (!OnlineSub)
 	{
-		if (IsValid(GameInstanceRef) && GameInstanceRef->FindingPrivateSessionFailedDelegate.IsBound())
+		if (GameInstanceRef.IsValid() && GameInstanceRef->FindingPrivateSessionFailedDelegate.IsBound())
 		{
 			GameInstanceRef->FindingPrivateSessionFailedDelegate.Execute();
 		}
@@ -547,7 +547,7 @@ bool ACPP_GameSession::FindPrivateSession(FUniqueNetIdRepl LocalUserId, const FS
 	const IOnlineSessionPtr Sessions = OnlineSub->GetSessionInterface();
 	if (!Sessions.IsValid())
 	{
-		if (IsValid(GameInstanceRef) && GameInstanceRef->FindingPrivateSessionFailedDelegate.IsBound())
+		if (GameInstanceRef.IsValid() && GameInstanceRef->FindingPrivateSessionFailedDelegate.IsBound())
 		{
 			GameInstanceRef->FindingPrivateSessionFailedDelegate.Execute();
 		}
@@ -615,7 +615,7 @@ void ACPP_GameSession::OnFindPrivateSessionComplete(bool bWasSuccessful)
 		const IOnlineSubsystem* OnlineSub = IOnlineSubsystem::Get();
 		if (!OnlineSub)
 		{
-			if (IsValid(GameInstanceRef) && GameInstanceRef->FindingPrivateSessionFailedDelegate.IsBound())
+			if (GameInstanceRef.IsValid() && GameInstanceRef->FindingPrivateSessionFailedDelegate.IsBound())
 			{
 				GameInstanceRef->FindingPrivateSessionFailedDelegate.Execute();
 			}
@@ -626,7 +626,7 @@ void ACPP_GameSession::OnFindPrivateSessionComplete(bool bWasSuccessful)
 		const IOnlineSessionPtr Sessions = OnlineSub->GetSessionInterface();
 		if (!Sessions.IsValid())
 		{
-			if (IsValid(GameInstanceRef) && GameInstanceRef->FindingPrivateSessionFailedDelegate.IsBound())
+			if (GameInstanceRef.IsValid() && GameInstanceRef->FindingPrivateSessionFailedDelegate.IsBound())
 			{
 				GameInstanceRef->FindingPrivateSessionFailedDelegate.Execute();
 			}
@@ -666,7 +666,7 @@ void ACPP_GameSession::OnFindPrivateSessionComplete(bool bWasSuccessful)
 				{
 					SessionName = FName(Result.Session.SessionSettings.Settings.FindRef(FName("SESSION_NAME")).
 					                           Data.ToString());
-					if (IsValid(GameInstanceRef))
+					if (GameInstanceRef.IsValid())
 					{
 						GameInstanceRef->SetCurrentSessionName(SessionName.ToString());
 						GameInstanceRef->SetPlayingModeAsInt(3);
@@ -677,7 +677,7 @@ void ACPP_GameSession::OnFindPrivateSessionComplete(bool bWasSuccessful)
 			}
 			else
 			{
-				if (IsValid(GameInstanceRef) && GameInstanceRef->FindingPrivateSessionFailedDelegate.IsBound())
+				if (GameInstanceRef.IsValid() && GameInstanceRef->FindingPrivateSessionFailedDelegate.IsBound())
 				{
 					GameInstanceRef->FindingPrivateSessionFailedDelegate.Execute();
 				}
@@ -685,7 +685,7 @@ void ACPP_GameSession::OnFindPrivateSessionComplete(bool bWasSuccessful)
 		}
 		else
 		{
-			if (IsValid(GameInstanceRef) && GameInstanceRef->FindingPrivateSessionFailedDelegate.IsBound())
+			if (GameInstanceRef.IsValid() && GameInstanceRef->FindingPrivateSessionFailedDelegate.IsBound())
 			{
 				GameInstanceRef->FindingPrivateSessionFailedDelegate.Execute();
 			}
@@ -693,7 +693,7 @@ void ACPP_GameSession::OnFindPrivateSessionComplete(bool bWasSuccessful)
 	}
 	else
 	{
-		if (IsValid(GameInstanceRef) && GameInstanceRef->FindingPrivateSessionFailedDelegate.IsBound())
+		if (GameInstanceRef.IsValid() && GameInstanceRef->FindingPrivateSessionFailedDelegate.IsBound())
 		{
 			GameInstanceRef->FindingPrivateSessionFailedDelegate.Execute();
 		}
@@ -758,7 +758,7 @@ bool ACPP_GameSession::JoinSession(FUniqueNetIdRepl InUserId,
 	// Adding the delegate handle.
 	DH_OnJoinSessionComplete = Sessions->AddOnJoinSessionCompleteDelegate_Handle(OnJoinSessionCompleteDelegate);
 
-	if (IsValid(GameInstanceRef))
+	if (GameInstanceRef.IsValid())
 	{
 		GameInstanceRef->SetCurrentSessionName(InSessionName.ToString());
 		SessionName = InSessionName;
@@ -805,7 +805,7 @@ void ACPP_GameSession::OnJoinSessionComplete(FName InSessionName, EOnJoinSession
 			PlayerController->ClientTravel(TravelURL, TRAVEL_Absolute);
 		}
 	}
-	else if (Result != 4 && IsValid(GameInstanceRef))
+	else if (Result != 4 && GameInstanceRef.IsValid())
 	{
 		if (GameInstanceRef->JoiningSessionFailedDelegate.IsBound())
 		{
@@ -834,7 +834,7 @@ bool ACPP_GameSession::EndSession(const FName& InSessionName)
 	// Adding the delegate handle.
 	DH_OnEndSessionComplete = Sessions->AddOnEndSessionCompleteDelegate_Handle(OnEndSessionCompleteDelegate);
 
-	if (IsValid(GameModeRef))
+	if (GameModeRef.IsValid())
 	{
 		GameModeRef->CallSessionEnding();
 	}
@@ -909,7 +909,7 @@ void ACPP_GameSession::OnDestroySessionComplete(FName InSessionName, bool bWasSu
 	if (bWasSuccessful)
 	{
 		SessionName = FName(TEXT("GameSession"));
-		if (IsValid(GameInstanceRef))
+		if (GameInstanceRef.IsValid())
 		{
 			GameInstanceRef->SetPlayingModeAsInt(0);
 			GameInstanceRef->SetCurrentSessionName(FString(TEXT("GameSession")));
@@ -1032,7 +1032,7 @@ bool ACPP_GameSession::StartTravel(const bool bIsSeamless)
 
 bool ACPP_GameSession::SeamlessTravel()
 {
-	if (!IsValid(GameModeRef))
+	if (!GameModeRef.IsValid())
 		return false;
 
 	GameModeRef->bUseSeamlessTravel = true;
@@ -1042,7 +1042,7 @@ bool ACPP_GameSession::SeamlessTravel()
 
 bool ACPP_GameSession::NonSeamlessTravel()
 {
-	if (!IsValid(GameModeRef))
+	if (!GameModeRef.IsValid())
 		return false;
 
 	GameModeRef->bUseSeamlessTravel = false;

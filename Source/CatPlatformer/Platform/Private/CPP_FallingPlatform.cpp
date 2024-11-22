@@ -34,51 +34,50 @@ void ACPP_FallingPlatform::BeginPlay()
 {
 	Super::BeginPlay();
 
-	CollisionBox->OnComponentBeginOverlap.AddDynamic(this, &ACPP_FallingPlatform::CollisionBoxOverlapBegin);
-	CollisionBox->OnComponentEndOverlap.AddDynamic(this, &ACPP_FallingPlatform::CollisionBoxOverlapEnd);
-
 	StartTransform = GetActorTransform();
 
-	if (CurveVector)
+	if (HasAuthority())
 	{
-		StartRotation = GetActorRotation();
-		// X = Roll, Y = Pitch, Z = Yaw.
-		EndRotation = FRotator(StartRotation.Pitch + ShakingOffset,
-		                       StartRotation.Yaw,
-		                       StartRotation.Roll + ShakingOffset);
+		CollisionBox->OnComponentBeginOverlap.AddDynamic(this, &ACPP_FallingPlatform::CollisionBoxOverlapBegin);
+		CollisionBox->OnComponentEndOverlap.AddDynamic(this, &ACPP_FallingPlatform::CollisionBoxOverlapEnd);
 
-		TimelineProgressDelegate.BindUFunction(this, FName(TEXT("ShakingTimelineProgress")));
+		TimelineComp->SetIsReplicated(true);
+		if (CurveVector)
+		{
+			StartRotation = GetActorRotation();
+			// X = Roll, Y = Pitch, Z = Yaw.
+			EndRotation = FRotator(StartRotation.Pitch + ShakingOffset,
+			                       StartRotation.Yaw,
+			                       StartRotation.Roll + ShakingOffset);
 
-		TimelineComp->AddInterpVector(CurveVector, TimelineProgressDelegate);
-		TimelineComp->SetLooping(true);
-		TimelineComp->SetIgnoreTimeDilation(true);
+			TimelineProgressDelegate.BindUFunction(this, FName(TEXT("ShakingTimelineProgress")));
+
+			TimelineComp->AddInterpVector(CurveVector, TimelineProgressDelegate);
+			TimelineComp->SetLooping(true);
+			TimelineComp->SetIgnoreTimeDilation(true);
+		}
 	}
 }
 
 void ACPP_FallingPlatform::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-	CollisionBox->OnComponentEndOverlap.RemoveDynamic(this, &ACPP_FallingPlatform::CollisionBoxOverlapEnd);
-	CollisionBox->OnComponentBeginOverlap.RemoveDynamic(this, &ACPP_FallingPlatform::CollisionBoxOverlapBegin);
-
-	if (CurveVector)
+	if (HasAuthority())
 	{
-		TimelineProgressDelegate.Unbind();
+		CollisionBox->OnComponentEndOverlap.RemoveDynamic(this, &ACPP_FallingPlatform::CollisionBoxOverlapEnd);
+		CollisionBox->OnComponentBeginOverlap.RemoveDynamic(this, &ACPP_FallingPlatform::CollisionBoxOverlapBegin);
+
+		if (CurveVector)
+		{
+			TimelineProgressDelegate.Unbind();
+		}
 	}
-
 	Super::EndPlay(EndPlayReason);
-}
-
-void ACPP_FallingPlatform::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
-{
-	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-
-	DOREPLIFETIME(ACPP_FallingPlatform, FallingSpeed);
-	DOREPLIFETIME(ACPP_FallingPlatform, SecondsBeforeFall);
 }
 
 void ACPP_FallingPlatform::InitializeBasicVariables_Implementation(const FVector StartLocation)
 {
-	Super::InitializeBasicVariables_Implementation(StartLocation);
+	if (!HasAuthority())
+		return;
 
 	FallingSpeed = FMath::FRandRange(9.0f, 12.0f);
 	SecondsBeforeFall = FMath::FRandRange(2.5f, 5.0f);
@@ -88,6 +87,9 @@ void ACPP_FallingPlatform::CollisionBoxOverlapBegin(UPrimitiveComponent* Overlap
                                                     UPrimitiveComponent* OtherComp, int32 OtherBodyIndex,
                                                     bool bFromSweep, const FHitResult& SweepResult)
 {
+	if (!HasAuthority())
+		return;
+
 	if (ACPP_Character* Character = Cast<ACPP_Character>(OtherActor))
 	{
 		Character->SetIsOnGrass(true);
@@ -112,6 +114,9 @@ void ACPP_FallingPlatform::CollisionBoxOverlapBegin(UPrimitiveComponent* Overlap
 void ACPP_FallingPlatform::CollisionBoxOverlapEnd(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
                                                   UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
+	if (!HasAuthority())
+		return;
+
 	if (ACPP_Character* Character = Cast<ACPP_Character>(OtherActor))
 	{
 		Character->SetIsOnGrass(false);
@@ -120,27 +125,33 @@ void ACPP_FallingPlatform::CollisionBoxOverlapEnd(UPrimitiveComponent* Overlappe
 
 void ACPP_FallingPlatform::Falling()
 {
+	if (!HasAuthority())
+		return;
+
 	if (TimelineComp->IsPlaying())
 	{
 		TimelineComp->Stop();
 	}
 
-	this->AddActorWorldOffset(FVector(0.0f, 0.0f, -FallingSpeed));
+	AddActorWorldOffset(FVector(0.0f, 0.0f, -FallingSpeed));
 
-	if (this->GetActorLocation().Z <= -1200.0f)
+	if (GetActorLocation().Z <= -1200.0f)
 	{
 		TeleportPlatformToStartPosition();
 	}
 }
 
-void ACPP_FallingPlatform::TeleportPlatformToStartPosition()
+void ACPP_FallingPlatform::TeleportPlatformToStartPosition_Implementation()
 {
+	if (!HasAuthority())
+		return;
+
 	if (GetWorld()->GetTimerManager().TimerExists(TH_FallingTimer))
 	{
 		GetWorld()->GetTimerManager().ClearTimer(TH_FallingTimer);
 	}
 
-	this->TeleportTo(StartTransform.GetLocation(), StartTransform.Rotator());
+	TeleportTo(StartTransform.GetLocation(), StartTransform.Rotator());
 }
 
 void ACPP_FallingPlatform::ShakingTimelineProgress(FVector Value)

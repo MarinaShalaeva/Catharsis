@@ -101,7 +101,7 @@ protected:
 	EPlayingMode PlayingMode;
 
 	/**
-	 * Type of splitscreen:
+	 * Types of splitscreen:
 	 * None = 0;
 	 * 2 player horizontal split = 1;
 	 * 2 player vertical split = 2;
@@ -338,6 +338,7 @@ public:
 	 * 3 = OnlineMultiplayerClientInPrivateSession,
 	 * 4 = OnlineMultiplayerClientInPublicSession.
 	 */
+	UFUNCTION(BlueprintCallable)
 	void SetPlayingModeAsInt(int32 NewValue);
 
 	/** Getter for the CurrentSplitscreenType variable. */

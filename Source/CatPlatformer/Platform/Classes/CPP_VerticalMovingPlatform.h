@@ -36,12 +36,6 @@ protected:
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 	/**
-	 * Returns the properties used for network replication.
-	 * @param OutLifetimeProps Lifetime properties.
-	 */
-	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
-
-	/**
 	 * Function for initializing variables before this
 	 * actor appears in the game world.
 	 * Should be called before BeginPlay() (between
@@ -85,14 +79,14 @@ private:
 	 * The start actor's location for playing the animation
 	 * of the smooth movement up and down.
 	 */
-	UPROPERTY(Replicated)
+	UPROPERTY()
 	FVector StartPosition;
 
 	/**
 	 * The end actor's location for playing the animation of
 	 * the smooth movement up and down.
 	 */
-	UPROPERTY(Replicated)
+	UPROPERTY()
 	FVector EndPosition;
 
 	/**
@@ -114,9 +108,8 @@ private:
 	 * Function for the interpolation of the actor's smooth
 	 * movement up and down.
 	 */
-	UFUNCTION(Unreliable, NetMulticast)
+	UFUNCTION()
 	void SmoothZMovementTimelineProgress(float Value);
-	void SmoothZMovementTimelineProgress_Implementation(float Value);
 
 	/**
 	 * Function for changing the Z movement direction after

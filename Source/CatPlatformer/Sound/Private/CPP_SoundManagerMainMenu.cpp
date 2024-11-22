@@ -3,7 +3,7 @@
 #include "../Classes/CPP_SoundManagerMainMenu.h"
 #include "Components/AudioComponent.h"
 
-ACPP_SoundManagerMainMenu::ACPP_SoundManagerMainMenu() : ACPP_SoundManager()
+ACPP_SoundManagerMainMenu::ACPP_SoundManagerMainMenu()
 {
 	MM_TrackAudioComponent_1 = CreateDefaultSubobject<UAudioComponent>(TEXT("Main Menu Audio Component 1"));
 	MM_TrackAudioComponent_1->SetupAttachment(RootComponent);
@@ -60,7 +60,7 @@ void ACPP_SoundManagerMainMenu::ApplySettingsFromTheSaveFile(const bool bSetDefa
 {
 	Super::ApplySettingsFromTheSaveFile(bSetDefaultValues, bIsAdditionalSoundManager);
 
-	if (!bSetDefaultValues && IsValid(PlayerStateRef))
+	if (!bSetDefaultValues && PlayerStateRef.IsValid())
 	{
 		PlaylistRepeatingMode = PlayerStateRef->Get_MM_PlaylistRepeatingMode();
 

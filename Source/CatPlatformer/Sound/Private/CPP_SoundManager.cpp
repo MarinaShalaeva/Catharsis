@@ -5,30 +5,28 @@
 #include "Kismet/GameplayStatics.h"
 #include "GameFramework/Character.h"
 
-ACPP_SoundManager::ACPP_SoundManager()
+ACPP_SoundManager::ACPP_SoundManager() : PlayerControllerRef(nullptr),
+                                         PlayerStateRef(nullptr),
+                                         SoundMix(nullptr),
+                                         Music_SoundClass(nullptr),
+                                         SFX_SoundClass(nullptr),
+                                         PlaylistRepeatingMode(EPlaylistRepeatingMode::RepeatPlaylist),
+                                         CurrentTrackIndex(0),
+                                         CurrentTrackNumber(1),
+                                         GeneralNumberOfTracks(-1),
+                                         bTrackIsPaused(false),
+                                         bShouldReactOnTrackEnding(true)
 {
 	PrimaryActorTick.bCanEverTick = true;
 
 	Root = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
 	SetRootComponent(Root);
-
-	PlayerControllerRef = nullptr;
-	SoundMix = nullptr;
-	Music_SoundClass = nullptr;
-	SFX_SoundClass = nullptr;
-
-	PlaylistRepeatingMode = EPlaylistRepeatingMode::RepeatPlaylist;
-	CurrentTrackIndex = 0;
-	CurrentTrackNumber = 1;
-	GeneralNumberOfTracks = -1;
-	bTrackIsPaused = false;
-	bShouldReactOnTrackEnding = true;
 }
 
 void ACPP_SoundManager::BeginPlay()
 {
 	Super::BeginPlay();
-	
+
 	FillAllAudioComponentsArray();
 }
 
@@ -50,7 +48,7 @@ void ACPP_SoundManager::ApplySettingsFromTheSaveFile(const bool bSetDefaultValue
 {
 	FillAllAudioComponentsArray();
 
-	if (bSetDefaultValues || !IsValid(PlayerStateRef))
+	if (bSetDefaultValues || !PlayerStateRef.IsValid())
 	{
 		PlaylistRepeatingMode = EPlaylistRepeatingMode::RepeatPlaylist;
 
@@ -81,7 +79,7 @@ void ACPP_SoundManager::ApplySettingsFromTheSaveFile(const bool bSetDefaultValue
 			StartPlayingCurrentTrack();
 		}
 	}
-	else if (IsValid(PlayerStateRef) && !bIsAdditionalSoundManager)
+	else if (PlayerStateRef.IsValid() && !bIsAdditionalSoundManager)
 	{
 		if (SoundMix)
 		{
@@ -108,7 +106,7 @@ void ACPP_SoundManager::SetNewSFXVolume(const float Volume) const
 		UGameplayStatics::SetSoundMixClassOverride(GetWorld(), SoundMix, SFX_SoundClass,
 		                                           Volume,
 		                                           1.0f, 0.0f, true);
-		if (IsValid(PlayerStateRef))
+		if (PlayerStateRef.IsValid())
 		{
 			PlayerStateRef->Set_SFX_Volume(Volume);
 		}
@@ -122,7 +120,7 @@ void ACPP_SoundManager::SetNewMusicVolume(const float Volume) const
 		UGameplayStatics::SetSoundMixClassOverride(GetWorld(), SoundMix, Music_SoundClass,
 		                                           Volume,
 		                                           1.0f, 0.0f, true);
-		if (IsValid(PlayerStateRef))
+		if (PlayerStateRef.IsValid())
 		{
 			PlayerStateRef->Set_Music_Volume(Volume);
 		}
@@ -202,8 +200,8 @@ void ACPP_SoundManager::StartPlayingNextTrack()
 	CurrentTrackIndex = ActivePlaylistTracks.Find(AllAudioComponents[CurrentTrackNumber - 1]);
 
 	TrackWasSwitchedDelegate.Broadcast();
-	
-	if (IsValid(PlayerStateRef) && PlayerStateRef->Get_Music_Volume() <= 0.0f)
+
+	if (PlayerStateRef.IsValid() && PlayerStateRef->Get_Music_Volume() <= 0.0f)
 		return;
 
 	StartPlayingCurrentTrack();
@@ -221,12 +219,12 @@ void ACPP_SoundManager::StartPlayingNextTrackFromActivePlaylist()
 		CurrentTrackIndex++;
 	}
 	UpdateCurrentTrackNumber();
-	
+
 	TrackWasSwitchedDelegate.Broadcast();
-	
-	if (IsValid(PlayerStateRef) && PlayerStateRef->Get_Music_Volume() <= 0.0f)
+
+	if (PlayerStateRef.IsValid() && PlayerStateRef->Get_Music_Volume() <= 0.0f)
 		return;
-	
+
 	StartPlayingCurrentTrack();
 }
 
@@ -244,7 +242,7 @@ void ACPP_SoundManager::StartPlayingPreviousTrack()
 	}
 	CurrentTrackIndex = ActivePlaylistTracks.Find(AllAudioComponents[CurrentTrackNumber - 1]);
 
-	if (IsValid(PlayerStateRef) && PlayerStateRef->Get_Music_Volume() <= 0.0f)
+	if (PlayerStateRef.IsValid() && PlayerStateRef->Get_Music_Volume() <= 0.0f)
 		return;
 
 	StartPlayingCurrentTrack();
@@ -417,7 +415,7 @@ void ACPP_SoundManager::RemoveTrackFromActivePlaylist(const uint8 TrackNumber)
 
 void ACPP_SoundManager::StartPlayingUserPlaylist()
 {
-	if (IsValid(PlayerStateRef) && PlayerStateRef->Get_Music_Volume() <= 0.0f)
+	if (PlayerStateRef.IsValid() && PlayerStateRef->Get_Music_Volume() <= 0.0f)
 		return;
 
 	if (ActivePlaylistTracks.Num() <= 0)
@@ -507,7 +505,7 @@ void ACPP_SoundManager::SetPlayerControllerRef(ACPP_PlayerController* NewPlayerC
 	{
 		PlayerControllerRef = NewPlayerController;
 		PlayerStateRef = PlayerControllerRef->GetPlayerState<ACPP_PlayerState>();
-		if (!IsValid(PlayerStateRef) && IsValid(PlayerControllerRef->GetCharacter()))
+		if (!PlayerStateRef.IsValid() && IsValid(PlayerControllerRef->GetCharacter()))
 		{
 			PlayerStateRef = PlayerControllerRef->GetCharacter()->GetPlayerState<ACPP_PlayerState>();
 		}

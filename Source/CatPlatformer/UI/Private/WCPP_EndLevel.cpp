@@ -1,6 +1,8 @@
 ﻿// (c) M. A. Shalaeva, 2024
 
 #include "../Classes/WCPP_EndLevel.h"
+
+#include "CatPlatformer/UI/Classes/WCPP_Level.h"
 #include "Kismet/GameplayStatics.h"
 #include "Components/WidgetSwitcher.h"
 #include "Components/TextBlock.h"
@@ -35,6 +37,7 @@ UWCPP_EndLevel::UWCPP_EndLevel(const FObjectInitializer& ObjectInitializer) : Su
                                                                               StartLevel4_Button(nullptr),
                                                                               StartLevel5_Button(nullptr),
                                                                               StartRandomLevel_Button(nullptr),
+                                                                              PlayerStateRef(nullptr),
                                                                               ClientPanel_VerticalBox(nullptr),
                                                                               ClientGoToMainMenuButton(nullptr),
                                                                               ClientExitButton(nullptr),
@@ -46,16 +49,16 @@ void UWCPP_EndLevel::NativeConstruct()
 {
 	Super::NativeConstruct();
 
-	if (!IsValid(GameInstanceRef))
+	if (!GameInstanceRef.IsValid())
 	{
 		GameInstanceRef = Cast<UCPP_GameInstance>(GetGameInstance());
 	}
 
-	if (!IsValid(PlayerControllerRef))
+	if (!PlayerControllerRef.IsValid())
 	{
 		PlayerControllerRef = Cast<ACPP_PlayerController>(GetOwningPlayer());
 	}
-	if (IsValid(PlayerControllerRef))
+	if (PlayerControllerRef.IsValid())
 	{
 		bIsGamepadMode = PlayerControllerRef->GetIsGamepadMode();
 		if (bIsGamepadMode)
@@ -64,6 +67,13 @@ void UWCPP_EndLevel::NativeConstruct()
 		}
 		DH_InputKeyWasPressed = PlayerControllerRef->InputKeyWasPressedDelegate.
 		                                             AddUObject(this, &UWCPP_EndLevel::AnyKeyPressed);
+		PlayerControllerRef->CharacterWasPossessedDelegate.
+		                     AddUObject(this, &UWCPP_EndLevel::NewCharacterWasPossessed);
+		if (PlayerControllerRef->GetCharacter())
+		{
+			NewCharacterWasPossessed(Cast<ACPP_Character>(PlayerControllerRef->GetCharacter()));
+		}
+
 		FText Name = FText::FromString(PlayerControllerRef->GetCustomUserName());
 		if (Name.IsEmptyOrWhitespace())
 		{
@@ -72,6 +82,14 @@ void UWCPP_EndLevel::NativeConstruct()
 		TB_UserName->SetText(Name);
 		TB_Score->SetText(FText::FromString(FString::Printf(TEXT("%d"),
 		                                                    PlayerControllerRef->GetCustomUserScore())));
+
+		FTimerHandle TH_UpdateScore;
+		GetWorld()->GetTimerManager().SetTimer(
+			TH_UpdateScore,
+			[&]() { if (IsValid(this)) ChangeScore(-1); },
+			0.75f,
+			false);
+
 		TB_Deaths->SetText(FText::FromString(FString::Printf(TEXT("%u"),
 		                                                     PlayerControllerRef->
 		                                                     GetCustomCurrentLevelDeathsNumber())));
@@ -141,13 +159,13 @@ void UWCPP_EndLevel::NativeConstruct()
 		default: break;
 		}
 	}
-	if (IsValid(GameInstanceRef))
+	if (GameInstanceRef.IsValid())
 	{
 		switch (GameInstanceRef->GetPlayingModeAsInt())
 		{
 		case 1:
 			{
-				if (IsValid(PlayerControllerRef))
+				if (PlayerControllerRef.IsValid())
 				{
 					if (PlayerControllerRef->bIsFirstPlayer)
 					{
@@ -262,7 +280,54 @@ void UWCPP_EndLevel::NativeDestruct()
 	default: break;
 	}
 
+	if (PlayerControllerRef.IsValid())
+	{
+		PlayerControllerRef->InputKeyWasPressedDelegate.Remove(DH_InputKeyWasPressed);
+		DH_InputKeyWasPressed.Reset();
+	}
+
+	if (PlayerStateRef.IsValid())
+	{
+		PlayerStateRef->ScoreChangedDelegate.Remove(DH_ScoreChanged);
+		DH_ScoreChanged.Reset();
+	}
+
 	Super::NativeDestruct();
+}
+
+void UWCPP_EndLevel::NewCharacterWasPossessed(ACPP_Character* NewCharacter)
+{
+	if (IsValid(NewCharacter))
+	{
+		if (!NewCharacter->PlayerStateChangedDelegate.IsBoundToObject(this))
+		{
+			NewCharacter->PlayerStateChangedDelegate.AddUObject(this, &UWCPP_EndLevel::PlayerStateWasChanged);
+			PlayerStateWasChanged(NewCharacter->GetPlayerState<ACPP_PlayerState>());
+		}
+	}
+}
+
+void UWCPP_EndLevel::PlayerStateWasChanged(ACPP_PlayerState* NewPlayerState)
+{
+	if (!IsValid(NewPlayerState))
+		return;
+
+	if (PlayerStateRef.IsValid())
+	{
+		PlayerStateRef->ScoreChangedDelegate.Remove(DH_ScoreChanged);
+		DH_ScoreChanged.Reset();
+	}
+	PlayerStateRef = NewPlayerState;
+	DH_ScoreChanged = PlayerStateRef->ScoreChangedDelegate.AddUObject(this, &UWCPP_EndLevel::ChangeScore);
+}
+
+void UWCPP_EndLevel::ChangeScore(const int32 ScoreToAdd)
+{
+	if (PlayerControllerRef.IsValid())
+	{
+		TB_Score->SetText(FText::FromString(FString::Printf(TEXT("%d"),
+		                                                    PlayerControllerRef->GetCustomUserScore())));
+	}
 }
 
 void UWCPP_EndLevel::StartNextLevelButtonOnClick()
@@ -281,7 +346,7 @@ void UWCPP_EndLevel::StartNextLevelButtonOnClick()
 void UWCPP_EndLevel::MainPlayerGoToMainMenuButtonOnClick()
 {
 	EndHostOnlineSession();
-	if (IsValid(GameInstanceRef))
+	if (GameInstanceRef.IsValid())
 	{
 		if (GameInstanceRef->GetPlayingModeAsInt() == 1)
 		{
@@ -301,7 +366,7 @@ void UWCPP_EndLevel::MainPlayerExitButtonOnClick()
 
 void UWCPP_EndLevel::EndHostOnlineSession() const
 {
-	if (IsValid(GameInstanceRef))
+	if (GameInstanceRef.IsValid())
 	{
 		if (GameInstanceRef->GetPlayingModeAsInt() == 2 &&
 			GameInstanceRef->StartEndingSessionDelegate.IsBound())
@@ -344,10 +409,10 @@ void UWCPP_EndLevel::StartRandomLevel_ButtonOnClick()
 
 void UWCPP_EndLevel::StartGame(const int32 LevelNumber) const
 {
-	if (!IsValid(GameInstanceRef))
+	if (!GameInstanceRef.IsValid())
 		return;
 
-	if (IsValid(PlayerControllerRef) && PlayerControllerRef->CreateNotificationDelegate.IsBound())
+	if (PlayerControllerRef.IsValid() && PlayerControllerRef->CreateNotificationDelegate.IsBound())
 	{
 		PlayerControllerRef->CreateNotificationDelegate.Execute(LevelIsLoadingInscription, 4.5f);
 	}
@@ -397,12 +462,12 @@ void UWCPP_EndLevel::ClientExitButtonOnClick()
 
 void UWCPP_EndLevel::EndClientOnlineSession() const
 {
-	if (IsValid(GameInstanceRef))
+	if (GameInstanceRef.IsValid())
 	{
 		if (GameInstanceRef->GetPlayingModeAsInt() == 3 ||
 			GameInstanceRef->GetPlayingModeAsInt() == 4)
 		{
-			if (IsValid(PlayerControllerRef))
+			if (PlayerControllerRef.IsValid())
 			{
 				PlayerControllerRef->ClientDestroyOnlineSession();
 			}
@@ -412,11 +477,11 @@ void UWCPP_EndLevel::EndClientOnlineSession() const
 
 void UWCPP_EndLevel::GoToMainMenu()
 {
-	if (IsValid(GameInstanceRef))
+	if (GameInstanceRef.IsValid())
 	{
 		GameInstanceRef->SetPlayingModeAsInt(0);
 	}
-	if (IsValid(PlayerControllerRef))
+	if (PlayerControllerRef.IsValid())
 	{
 		PlayerControllerRef->CallCollectingInfoForSavingItToFile();
 	}
@@ -434,14 +499,11 @@ void UWCPP_EndLevel::GoToMainMenu()
 void UWCPP_EndLevel::Exit()
 {
 	const UWorld* World = GetWorld();
-	if (PlayerControllerRef)
+	if (PlayerControllerRef.IsValid())
 	{
-		if (IsValid(PlayerControllerRef))
-		{
-			PlayerControllerRef->CallCollectingInfoForSavingItToFile();
-		}
+		PlayerControllerRef->CallCollectingInfoForSavingItToFile();
 		UKismetSystemLibrary::QuitGame(World,
-		                               PlayerControllerRef,
+		                               PlayerControllerRef.Get(),
 		                               EQuitPreference::Quit,
 		                               false);
 	}
@@ -472,9 +534,9 @@ void UWCPP_EndLevel::SetFocusForGamepadMode()
 	{
 	case 0:
 		{
-			if (IsValid(PlayerControllerRef))
+			if (PlayerControllerRef.IsValid())
 			{
-				StartNextLevelButton->SetUserFocus(PlayerControllerRef);
+				StartNextLevelButton->SetUserFocus(PlayerControllerRef.Get());
 			}
 			else
 			{
@@ -484,9 +546,9 @@ void UWCPP_EndLevel::SetFocusForGamepadMode()
 		}
 	case 1:
 		{
-			if (IsValid(PlayerControllerRef))
+			if (PlayerControllerRef.IsValid())
 			{
-				ClientGoToMainMenuButton->SetUserFocus(PlayerControllerRef);
+				ClientGoToMainMenuButton->SetUserFocus(PlayerControllerRef.Get());
 			}
 			else
 			{

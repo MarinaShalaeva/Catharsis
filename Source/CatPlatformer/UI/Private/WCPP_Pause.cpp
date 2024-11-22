@@ -44,14 +44,14 @@ void UWCPP_Pause::NativeConstruct()
 	ExitButton->OnClicked.AddDynamic(this, &UWCPP_Pause::ExitButtonOnClick);
 	GoBackButton->OnClicked.AddDynamic(this, &UWCPP_Pause::GoBackButtonOnClick);
 
-	if (!IsValid(GameInstanceRef))
+	if (!GameInstanceRef.IsValid())
 	{
 		GameInstanceRef = Cast<UCPP_GameInstance>(GetGameInstance());
 	}
 
-	if (!IsValid(PlayerControllerRef))
+	if (!PlayerControllerRef.IsValid())
 	{
-		if (IsValid(GameInstanceRef) && GameInstanceRef->GetPlayingModeAsInt() == 1 &&
+		if (GameInstanceRef.IsValid() && GameInstanceRef->GetPlayingModeAsInt() == 1 &&
 			IsValid(GetOwningLocalPlayer()) && IsValid(GetOwningLocalPlayer()->PlayerController.Get()))
 		{
 			PlayerControllerRef = Cast<ACPP_PlayerController>(GetOwningLocalPlayer()->PlayerController.Get());
@@ -61,7 +61,7 @@ void UWCPP_Pause::NativeConstruct()
 			PlayerControllerRef = Cast<ACPP_PlayerController>(GetOwningPlayer());
 		}
 	}
-	if (IsValid(PlayerControllerRef))
+	if (PlayerControllerRef.IsValid())
 	{
 		bIsGamepadMode = PlayerControllerRef->GetIsGamepadMode();
 		if (bIsGamepadMode)
@@ -84,7 +84,7 @@ void UWCPP_Pause::NativeDestruct()
 
 	DestroySettingsWidget();
 
-	if (IsValid(PlayerControllerRef))
+	if (PlayerControllerRef.IsValid())
 	{
 		PlayerControllerRef->InputKeyWasPressedDelegate.Remove(DH_InputKeyWasPressed);
 		DH_InputKeyWasPressed.Reset();
@@ -98,7 +98,7 @@ void UWCPP_Pause::NativeDestruct()
 
 void UWCPP_Pause::BackToGameButtonOnClick()
 {
-	if (IsValid(PlayerControllerRef))
+	if (PlayerControllerRef.IsValid())
 	{
 		PlayerControllerRef->EndPause();
 	}
@@ -130,23 +130,26 @@ void UWCPP_Pause::SwitchToSettingsPanel()
 void UWCPP_Pause::InitSettingsWidget()
 {
 	if (Settings_Widget == nullptr &&
-		IsValid(PlayerControllerRef) &&
-		IsValid(GameInstanceRef))
+		PlayerControllerRef.IsValid() &&
+		GameInstanceRef.IsValid())
 	{
 		const FName Row = FName(TEXT("Settings"));
-		if (UClass* Class = GameInstanceRef->GetWidgetClassBySoftReference(
-			UCPP_StaticWidgetLibrary::GetSoftReferenceToWidgetBlueprintByRowName(
-				WidgetBlueprintsDataTable,
-				Row)))
+		if (IsValid(WidgetBlueprintsDataTable.LoadSynchronous()))
 		{
-			Settings_Widget = CreateWidget<UWCPP_Settings>(PlayerControllerRef, Class);
-			if (IsValid(Settings_Widget))
+			if (UClass* Class = GameInstanceRef->GetWidgetClassBySoftReference(
+				UCPP_StaticWidgetLibrary::GetSoftReferenceToWidgetBlueprintByRowName(
+					WidgetBlueprintsDataTable.Get(),
+					Row)))
 			{
-				Settings_Widget->SetFlags(RF_StrongRefOnFrame);
-				Settings_Widget->bIsMainMenu = false;
-				Settings_Widget->SetPlayerControllerRef(PlayerControllerRef);
-				Settings_Widget->SetGameInstanceRef(GameInstanceRef);
-				SettingsSizeBox->AddChild(Settings_Widget);
+				Settings_Widget = CreateWidget<UWCPP_Settings>(PlayerControllerRef.Get(), Class);
+				if (Settings_Widget.IsValid())
+				{
+					Settings_Widget->SetFlags(RF_StrongRefOnFrame);
+					Settings_Widget->bIsMainMenu = false;
+					Settings_Widget->SetPlayerControllerRef(PlayerControllerRef.Get());
+					Settings_Widget->SetGameInstanceRef(GameInstanceRef.Get());
+					SettingsSizeBox->AddChild(Settings_Widget.Get());
+				}
 			}
 		}
 	}
@@ -154,7 +157,7 @@ void UWCPP_Pause::InitSettingsWidget()
 
 void UWCPP_Pause::DestroySettingsWidget()
 {
-	if (IsValid(Settings_Widget))
+	if (Settings_Widget.IsValid())
 	{
 		Settings_Widget->RemoveFromParent();
 		Settings_Widget = nullptr;
@@ -164,7 +167,7 @@ void UWCPP_Pause::DestroySettingsWidget()
 void UWCPP_Pause::GoToMainMenuButtonOnClick()
 {
 	EndOnlineSession();
-	if (IsValid(GameInstanceRef))
+	if (GameInstanceRef.IsValid())
 	{
 		if (GameInstanceRef->GetPlayingModeAsInt() == 1)
 		{
@@ -173,9 +176,8 @@ void UWCPP_Pause::GoToMainMenuButtonOnClick()
 			GameInstanceRef->ChangeActiveSplitscreenTypeDelegate.Broadcast(0);
 		}
 		GameInstanceRef->SetPlayingModeAsInt(0);
-		//GameInstanceRef->SetCurrentSessionName(FString(TEXT("GameSession")));
 	}
-	if (IsValid(PlayerControllerRef))
+	if (PlayerControllerRef.IsValid())
 	{
 		PlayerControllerRef->CallCollectingInfoForSavingItToFile();
 	}
@@ -194,14 +196,11 @@ void UWCPP_Pause::ExitButtonOnClick()
 {
 	EndOnlineSession();
 	const UWorld* World = GetWorld();
-	if (PlayerControllerRef)
+	if (PlayerControllerRef.IsValid())
 	{
-		if (IsValid(PlayerControllerRef))
-		{
-			PlayerControllerRef->CallCollectingInfoForSavingItToFile();
-		}
+		PlayerControllerRef->CallCollectingInfoForSavingItToFile();
 		UKismetSystemLibrary::QuitGame(World,
-		                               PlayerControllerRef,
+		                               PlayerControllerRef.Get(),
 		                               EQuitPreference::Quit,
 		                               false);
 	}
@@ -216,12 +215,12 @@ void UWCPP_Pause::ExitButtonOnClick()
 
 void UWCPP_Pause::EndOnlineSession() const
 {
-	if (IsValid(GameInstanceRef))
+	if (GameInstanceRef.IsValid())
 	{
 		if (GameInstanceRef->GetPlayingModeAsInt() == 3 ||
 			GameInstanceRef->GetPlayingModeAsInt() == 4)
 		{
-			if (IsValid(PlayerControllerRef))
+			if (PlayerControllerRef.IsValid())
 			{
 				PlayerControllerRef->ClientDestroyOnlineSession();
 			}
@@ -314,13 +313,13 @@ void UWCPP_Pause::SetFocusForGamepadMode()
 
 	if (PanelsWidgetSwitcher->GetActiveWidgetIndex() == 0)
 	{
-		if (IsValid(PlayerControllerRef))
+		if (PlayerControllerRef.IsValid())
 		{
-			if (IsValid(GameInstanceRef) && GameInstanceRef->GetPlayingModeAsInt() == 1)
+			if (GameInstanceRef.IsValid() && GameInstanceRef->GetPlayingModeAsInt() == 1)
 			{
 				BackToGameButton->SetKeyboardFocus();
 			}
-			BackToGameButton->SetUserFocus(PlayerControllerRef);
+			BackToGameButton->SetUserFocus(PlayerControllerRef.Get());
 		}
 		else
 		{

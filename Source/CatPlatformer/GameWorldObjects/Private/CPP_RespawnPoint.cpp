@@ -48,6 +48,9 @@ void ACPP_RespawnPoint::CollisionBoxOverlapBegin(UPrimitiveComponent* Overlapped
                                                  UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep,
                                                  const FHitResult& SweepResult)
 {
+	if (!HasAuthority())
+		return;
+	
 	if (const ACPP_Character* Character = Cast<ACPP_Character>(OtherActor))
 	{
 		ACPP_PlayerState* PS = nullptr;
@@ -61,31 +64,27 @@ void ACPP_RespawnPoint::CollisionBoxOverlapBegin(UPrimitiveComponent* Overlapped
 		}
 		if (IsValid(PS))
 		{
-			if (!IsValid(GameStateRef))
+			if (!GameStateRef.IsValid())
 			{
 				GameStateRef = Cast<ACPP_GameState>(UGameplayStatics::GetGameState(GetWorld()));
 			}
-			if (IsValid(GameStateRef))
+			if (GameStateRef.IsValid())
 			{
 				GameStateRef->AddUserScore(PS, -15);
 			}
 			PS->IncrementDeathsNumber();
 		}
-		if (!IsValid(GameModeRef))
+		if (!GameModeRef.IsValid())
 		{
 			GameModeRef = Cast<ACPP_GameMode>(UGameplayStatics::GetGameMode(GetWorld()));
 		}
-		if (IsValid(GameModeRef))
+		if (GameModeRef.IsValid())
 		{
 			GameModeRef->RespawnPlayer(Character->GetInstigatorController());
 		}
 	}
 	else if (ACPP_EnemyCharacter* Enemy = Cast<ACPP_EnemyCharacter>(OtherActor))
 	{
-		/*GEngine->AddOnScreenDebugMessage(-1, 10.0f, FColor::Purple,
-									 FString::Printf(
-										 TEXT("ACPP_RespawnPoint, Enemy = %s"), *Enemy->GetName()));*/
-		
 		Enemy->TeleportTo(Enemy->StartTransform.GetLocation(),
 						  FRotator(Enemy->StartTransform.GetRotation()));
 	}

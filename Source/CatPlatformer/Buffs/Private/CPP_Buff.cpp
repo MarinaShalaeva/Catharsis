@@ -2,7 +2,6 @@
 
 #include "../Classes/CPP_Buff.h"
 #include "Kismet/GameplayStatics.h"
-#include "Net/UnrealNetwork.h"
 
 #ifndef CPP_GAMESTATE_H
 #define CPP_GAMESTATE_H
@@ -11,7 +10,16 @@
 class ACPP_GameState;
 class ACPP_PlayerState;
 
-ACPP_Buff::ACPP_Buff()
+ACPP_Buff::ACPP_Buff() : BuffTypeId(-1),
+                         EffectDuration(5.0f),
+                         BuffImage(nullptr),
+                         ScoreToAdd(10),
+                         BuffRotationSpeed(4.5f),
+                         SmoothZMovementCurveFloat(nullptr),
+                         StartPosition(FVector(0.0f)),
+                         EndPosition(FVector(0.0f)),
+                         bIsMovingUp(true),
+                         ZPositionOffset(45.0f)
 {
 	PrimaryActorTick.bCanEverTick = true;
 
@@ -23,19 +31,6 @@ ACPP_Buff::ACPP_Buff()
 
 	TimelineComp = CreateDefaultSubobject<UTimelineComponent>(FName(TEXT("TimelineComponent")));
 
-	SmoothZMovementCurveFloat = nullptr;
-
-	BuffTypeId = -1;
-	EffectDuration = 5.0f;
-	BuffImage = nullptr;
-	ScoreToAdd = 10;
-
-	bIsMovingUp = true;
-	StartPosition = FVector(0.0f);
-	EndPosition = FVector(0.0f);
-	ZPositionOffset = 45.0f;
-	BuffRotationSpeed = 1.0f;
-
 	bReplicates = true;
 	bAlwaysRelevant = true;
 }
@@ -44,43 +39,44 @@ void ACPP_Buff::BeginPlay()
 {
 	Super::BeginPlay();
 
-	SM_Buff->OnComponentBeginOverlap.AddDynamic(this, &ACPP_Buff::StaticMeshOverlapBegin);
+	SM_Buff->OnComponentBeginOverlap.AddUniqueDynamic(this, &ACPP_Buff::StaticMeshOverlapBegin);
 
-	if (SmoothZMovementCurveFloat)
+	if (HasAuthority() && SmoothZMovementCurveFloat)
 	{
-		TimelineComp->Play();
+		if (bIsMovingUp)
+		{
+			TimelineComp->Play();
+		}
+		else
+		{
+			TimelineComp->Reverse();
+		}
 	}
-
-	GetWorld()->GetTimerManager().SetTimer(
-		TH_BuffRotation,
-		this,
-		&ACPP_Buff::RotateBuffAroundItsAxis,
-		0.05f,
-		true);
 }
 
 void ACPP_Buff::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	SM_Buff->OnComponentBeginOverlap.RemoveDynamic(this, &ACPP_Buff::StaticMeshOverlapBegin);
 
-	SmoothZMovementProgressDelegate.Unbind();
-	SmoothZMovementTimelineEndedDelegate.Unbind();
-
-	GetWorld()->GetTimerManager().ClearAllTimersForObject(this);
-
+	if (HasAuthority())
+	{
+		SmoothZMovementProgressDelegate.Unbind();
+		SmoothZMovementTimelineEndedDelegate.Unbind();
+	}
 	Super::EndPlay(EndPlayReason);
 }
 
-void ACPP_Buff::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+void ACPP_Buff::Tick(float DeltaSeconds)
 {
-	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-
-	DOREPLIFETIME(ACPP_Buff, StartPosition);
-	DOREPLIFETIME(ACPP_Buff, EndPosition);
+	Super::Tick(DeltaSeconds);
+	RotateBuffAroundItsAxis(DeltaSeconds);
 }
 
 void ACPP_Buff::InitializeBasicVariables_Implementation(const FVector& StartLocation)
 {
+	if (!HasAuthority())
+		return;
+
 	if (SmoothZMovementCurveFloat)
 	{
 		StartPosition = StartLocation;
@@ -105,6 +101,9 @@ void ACPP_Buff::StaticMeshOverlapBegin(UPrimitiveComponent* OverlappedComponent,
                                        UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep,
                                        const FHitResult& SweepResult)
 {
+	if (!HasAuthority())
+		return;
+
 	if (ACPP_Character* Character = Cast<ACPP_Character>(OtherActor))
 	{
 		CollectBuff(Character);
@@ -113,6 +112,11 @@ void ACPP_Buff::StaticMeshOverlapBegin(UPrimitiveComponent* OverlappedComponent,
 
 void ACPP_Buff::CollectBuff_Implementation(ACPP_Character* Character)
 {
+	if (!HasAuthority())
+		return;
+
+	Multicast_CollectBuff(Character);
+	
 	if (ACPP_GameState* GameState =
 			Cast<ACPP_GameState>(UGameplayStatics::GetGameState(Character->GetWorld()));
 		IsValid(GameState))
@@ -121,39 +125,48 @@ void ACPP_Buff::CollectBuff_Implementation(ACPP_Character* Character)
 			                        ? Character->GetPlayerStateRef()
 			                        : Cast<ACPP_PlayerState>(Character->GetPlayerState()), ScoreToAdd);
 	}
-	Multicast_CollectBuff(Character);
-}
 
-void ACPP_Buff::Multicast_CollectBuff_Implementation(ACPP_Character* Character)
-{
 	if (IsValid(this))
 	{
 		Destroy();
 	}
 }
 
-void ACPP_Buff::RotateBuffAroundItsAxis()
+void ACPP_Buff::Multicast_CollectBuff_Implementation(ACPP_Character* Character)
 {
-	// X = Roll, Y = Pitch, Z = Yaw.
-	AddActorWorldRotation(FRotator(0.0f, BuffRotationSpeed, 0.0f));
+}
+
+void ACPP_Buff::RotateBuffAroundItsAxis(const float DeltaSeconds)
+{
+	if (HasAuthority())
+	{
+		// X = Roll, Y = Pitch, Z = Yaw.
+		AddActorWorldRotation(FRotator(0.0f, BuffRotationSpeed * DeltaSeconds, 0.0f));
+	}
 }
 
 void ACPP_Buff::SmoothZMovementTimelineProgress_Implementation(float Value)
 {
-	const FVector NewLocation = FMath::Lerp(StartPosition, EndPosition, Value);
-	SetActorLocation(NewLocation);
+	if (HasAuthority())
+	{
+		const FVector NewLocation = FMath::Lerp(StartPosition, EndPosition, Value);
+		SetActorLocation(NewLocation);
+	}
 }
 
 void ACPP_Buff::SmoothZMovementTimelineEnded()
 {
-	if (bIsMovingUp)
+	if (HasAuthority())
 	{
-		TimelineComp->ReverseFromEnd();
-		bIsMovingUp = false;
-	}
-	else
-	{
-		TimelineComp->PlayFromStart();
-		bIsMovingUp = true;
+		if (bIsMovingUp)
+		{
+			TimelineComp->ReverseFromEnd();
+			bIsMovingUp = false;
+		}
+		else
+		{
+			TimelineComp->PlayFromStart();
+			bIsMovingUp = true;
+		}
 	}
 }
